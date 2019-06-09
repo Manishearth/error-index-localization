@@ -1,3 +1,11 @@
+#!/bin/bash
+if [ -z "$1" ]
+  then
+    echo "No argument supplied, please provide path to rust clone";
+    exit 1;
+fi
+
+set -e
 echo >gen_json/modules.rs
 echo "{" >gen_json/register.rs
 rm ./gen_json/auto/*
@@ -11,3 +19,6 @@ if grep -q "register_long_diagnostics" $file; then
 fi
 done
 echo "}" >>gen_json/register.rs
+cd gen_json
+cargo run
+cd ..
