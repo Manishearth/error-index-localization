@@ -1,0 +1,26 @@
+{
+  "E0660": {
+    "message": "\nThe argument to the `asm` macro is not well-formed.\n\nErroneous code example:\n\n```compile_fail,E0660\nasm!(\"nop\" \"nop\");\n```\n\nConsidering that this would be a long explanation, we instead recommend you to\ntake a look at the unstable book:\nhttps://doc.rust-lang.org/unstable-book/language-features/asm.html\n",
+    "description": "E0660"
+  },
+  "E0661": {
+    "message": "\nAn invalid syntax was passed to the second argument of an `asm` macro line.\n\nErroneous code example:\n\n```compile_fail,E0661\nlet a;\nasm!(\"nop\" : \"r\"(a));\n```\n\nConsidering that this would be a long explanation, we instead recommend you to\ntake a look at the unstable book:\nhttps://doc.rust-lang.org/unstable-book/language-features/asm.html\n",
+    "description": "E0661"
+  },
+  "E0662": {
+    "message": "\nAn invalid input operand constraint was passed to the `asm` macro (third line).\n\nErroneous code example:\n\n```compile_fail,E0662\nasm!(\"xor %eax, %eax\"\n     :\n     : \"=test\"(\"a\")\n    );\n```\n\nConsidering that this would be a long explanation, we instead recommend you to\ntake a look at the unstable book:\nhttps://doc.rust-lang.org/unstable-book/language-features/asm.html\n",
+    "description": "E0662"
+  },
+  "E0663": {
+    "message": "\nAn invalid input operand constraint was passed to the `asm` macro (third line).\n\nErroneous code example:\n\n```compile_fail,E0663\nasm!(\"xor %eax, %eax\"\n     :\n     : \"+test\"(\"a\")\n    );\n```\n\nConsidering that this would be a long explanation, we instead recommend you to\ntake a look at the unstable book:\nhttps://doc.rust-lang.org/unstable-book/language-features/asm.html\n",
+    "description": "E0663"
+  },
+  "E0664": {
+    "message": "\nA clobber was surrounded by braces in the `asm` macro.\n\nErroneous code example:\n\n```compile_fail,E0664\nasm!(\"mov $$0x200, %eax\"\n     :\n     :\n     : \"{eax}\"\n    );\n```\n\nConsidering that this would be a long explanation, we instead recommend you to\ntake a look at the unstable book:\nhttps://doc.rust-lang.org/unstable-book/language-features/asm.html\n",
+    "description": "E0664"
+  },
+  "E0665": {
+    "message": "\nThe `Default` trait was derived on an enum.\n\nErroneous code example:\n\n```compile_fail,E0665\n#[derive(Default)]\nenum Food {\n    Sweet,\n    Salty,\n}\n```\n\nThe `Default` cannot be derived on an enum for the simple reason that the\ncompiler doesn't know which value to pick by default whereas it can for a\nstruct as long as all its fields implement the `Default` trait as well.\n\nIf you still want to implement `Default` on your enum, you'll have to do it \"by\nhand\":\n\n```\nenum Food {\n    Sweet,\n    Salty,\n}\n\nimpl Default for Food {\n    fn default() -> Food {\n        Food::Sweet\n    }\n}\n```\n",
+    "description": "E0665"
+  }
+}

@@ -1,0 +1,582 @@
+{
+  "E0023": {
+    "message": "\nA pattern used to match against an enum variant must provide a sub-pattern for\neach field of the enum variant. This error indicates that a pattern attempted to\nextract an incorrect number of fields from a variant.\n\n```\nenum Fruit {\n    Apple(String, String),\n    Pear(u32),\n}\n```\n\nHere the `Apple` variant has two fields, and should be matched against like so:\n\n```\nenum Fruit {\n    Apple(String, String),\n    Pear(u32),\n}\n\nlet x = Fruit::Apple(String::new(), String::new());\n\n// Correct.\nmatch x {\n    Fruit::Apple(a, b) => {},\n    _ => {}\n}\n```\n\nMatching with the wrong number of fields has no sensible interpretation:\n\n```compile_fail,E0023\nenum Fruit {\n    Apple(String, String),\n    Pear(u32),\n}\n\nlet x = Fruit::Apple(String::new(), String::new());\n\n// Incorrect.\nmatch x {\n    Fruit::Apple(a) => {},\n    Fruit::Apple(a, b, c) => {},\n}\n```\n\nCheck how many fields the enum was declared with and ensure that your pattern\nuses the same number.\n",
+    "description": "E0023"
+  },
+  "E0025": {
+    "message": "\nEach field of a struct can only be bound once in a pattern. Erroneous code\nexample:\n\n```compile_fail,E0025\nstruct Foo {\n    a: u8,\n    b: u8,\n}\n\nfn main(){\n    let x = Foo { a:1, b:2 };\n\n    let Foo { a: x, a: y } = x;\n    // error: field `a` bound multiple times in the pattern\n}\n```\n\nEach occurrence of a field name binds the value of that field, so to fix this\nerror you will have to remove or alter the duplicate uses of the field name.\nPerhaps you misspelled another field name? Example:\n\n```\nstruct Foo {\n    a: u8,\n    b: u8,\n}\n\nfn main(){\n    let x = Foo { a:1, b:2 };\n\n    let Foo { a: x, b: y } = x; // ok!\n}\n```\n",
+    "description": "E0025"
+  },
+  "E0026": {
+    "message": "\nThis error indicates that a struct pattern attempted to extract a non-existent\nfield from a struct. Struct fields are identified by the name used before the\ncolon `:` so struct patterns should resemble the declaration of the struct type\nbeing matched.\n\n```\n// Correct matching.\nstruct Thing {\n    x: u32,\n    y: u32\n}\n\nlet thing = Thing { x: 1, y: 2 };\n\nmatch thing {\n    Thing { x: xfield, y: yfield } => {}\n}\n```\n\nIf you are using shorthand field patterns but want to refer to the struct field\nby a different name, you should rename it explicitly.\n\nChange this:\n\n```compile_fail,E0026\nstruct Thing {\n    x: u32,\n    y: u32\n}\n\nlet thing = Thing { x: 0, y: 0 };\n\nmatch thing {\n    Thing { x, z } => {}\n}\n```\n\nTo this:\n\n```\nstruct Thing {\n    x: u32,\n    y: u32\n}\n\nlet thing = Thing { x: 0, y: 0 };\n\nmatch thing {\n    Thing { x, y: z } => {}\n}\n```\n",
+    "description": "E0026"
+  },
+  "E0027": {
+    "message": "\nThis error indicates that a pattern for a struct fails to specify a sub-pattern\nfor every one of the struct's fields. Ensure that each field from the struct's\ndefinition is mentioned in the pattern, or use `..` to ignore unwanted fields.\n\nFor example:\n\n```compile_fail,E0027\nstruct Dog {\n    name: String,\n    age: u32,\n}\n\nlet d = Dog { name: \"Rusty\".to_string(), age: 8 };\n\n// This is incorrect.\nmatch d {\n    Dog { age: x } => {}\n}\n```\n\nThis is correct (explicit):\n\n```\nstruct Dog {\n    name: String,\n    age: u32,\n}\n\nlet d = Dog { name: \"Rusty\".to_string(), age: 8 };\n\nmatch d {\n    Dog { name: ref n, age: x } => {}\n}\n\n// This is also correct (ignore unused fields).\nmatch d {\n    Dog { age: x, .. } => {}\n}\n```\n",
+    "description": "E0027"
+  },
+  "E0029": {
+    "message": "\nIn a match expression, only numbers and characters can be matched against a\nrange. This is because the compiler checks that the range is non-empty at\ncompile-time, and is unable to evaluate arbitrary comparison functions. If you\nwant to capture values of an orderable type between two end-points, you can use\na guard.\n\n```compile_fail,E0029\nlet string = \"salutations !\";\n\n// The ordering relation for strings can't be evaluated at compile time,\n// so this doesn't work:\nmatch string {\n    \"hello\" ..= \"world\" => {}\n    _ => {}\n}\n\n// This is a more general version, using a guard:\nmatch string {\n    s if s >= \"hello\" && s <= \"world\" => {}\n    _ => {}\n}\n```\n",
+    "description": "E0029"
+  },
+  "E0033": {
+    "message": "\nThis error indicates that a pointer to a trait type cannot be implicitly\ndereferenced by a pattern. Every trait defines a type, but because the\nsize of trait implementors isn't fixed, this type has no compile-time size.\nTherefore, all accesses to trait types must be through pointers. If you\nencounter this error you should try to avoid dereferencing the pointer.\n\n```compile_fail,E0033\n# trait SomeTrait { fn method_one(&self){} fn method_two(&self){} }\n# impl<T> SomeTrait for T {}\nlet trait_obj: &SomeTrait = &\"some_value\";\n\n// This tries to implicitly dereference to create an unsized local variable.\nlet &invalid = trait_obj;\n\n// You can call methods without binding to the value being pointed at.\ntrait_obj.method_one();\ntrait_obj.method_two();\n```\n\nYou can read more about trait objects in the [Trait Objects] section of the\nReference.\n\n[Trait Objects]: https://doc.rust-lang.org/reference/types.html#trait-objects\n",
+    "description": "E0033"
+  },
+  "E0034": {
+    "message": "\nThe compiler doesn't know what method to call because more than one method\nhas the same prototype. Erroneous code example:\n\n```compile_fail,E0034\nstruct Test;\n\ntrait Trait1 {\n    fn foo();\n}\n\ntrait Trait2 {\n    fn foo();\n}\n\nimpl Trait1 for Test { fn foo() {} }\nimpl Trait2 for Test { fn foo() {} }\n\nfn main() {\n    Test::foo() // error, which foo() to call?\n}\n```\n\nTo avoid this error, you have to keep only one of them and remove the others.\nSo let's take our example and fix it:\n\n```\nstruct Test;\n\ntrait Trait1 {\n    fn foo();\n}\n\nimpl Trait1 for Test { fn foo() {} }\n\nfn main() {\n    Test::foo() // and now that's good!\n}\n```\n\nHowever, a better solution would be using fully explicit naming of type and\ntrait:\n\n```\nstruct Test;\n\ntrait Trait1 {\n    fn foo();\n}\n\ntrait Trait2 {\n    fn foo();\n}\n\nimpl Trait1 for Test { fn foo() {} }\nimpl Trait2 for Test { fn foo() {} }\n\nfn main() {\n    <Test as Trait1>::foo()\n}\n```\n\nOne last example:\n\n```\ntrait F {\n    fn m(&self);\n}\n\ntrait G {\n    fn m(&self);\n}\n\nstruct X;\n\nimpl F for X { fn m(&self) { println!(\"I am F\"); } }\nimpl G for X { fn m(&self) { println!(\"I am G\"); } }\n\nfn main() {\n    let f = X;\n\n    F::m(&f); // it displays \"I am F\"\n    G::m(&f); // it displays \"I am G\"\n}\n```\n",
+    "description": "E0034"
+  },
+  "E0040": {
+    "message": "\nIt is not allowed to manually call destructors in Rust. It is also not\nnecessary to do this since `drop` is called automatically whenever a value goes\nout of scope.\n\nHere's an example of this error:\n\n```compile_fail,E0040\nstruct Foo {\n    x: i32,\n}\n\nimpl Drop for Foo {\n    fn drop(&mut self) {\n        println!(\"kaboom\");\n    }\n}\n\nfn main() {\n    let mut x = Foo { x: -7 };\n    x.drop(); // error: explicit use of destructor method\n}\n```\n",
+    "description": "E0040"
+  },
+  "E0044": {
+    "message": "\nYou can't use type or const parameters on foreign items.\nExample of erroneous code:\n\n```compile_fail,E0044\nextern { fn some_func<T>(x: T); }\n```\n\nTo fix this, replace the generic parameter with the specializations that you\nneed:\n\n```\nextern { fn some_func_i32(x: i32); }\nextern { fn some_func_i64(x: i64); }\n```\n",
+    "description": "E0044"
+  },
+  "E0045": {
+    "message": "\nRust only supports variadic parameters for interoperability with C code in its\nFFI. As such, variadic parameters can only be used with functions which are\nusing the C ABI. Examples of erroneous code:\n\n```compile_fail\n#![feature(unboxed_closures)]\n\nextern \"rust-call\" { fn foo(x: u8, ...); }\n\n// or\n\nfn foo(x: u8, ...) {}\n```\n\nTo fix such code, put them in an extern \"C\" block:\n\n```\nextern \"C\" {\n    fn foo (x: u8, ...);\n}\n```\n",
+    "description": "E0045"
+  },
+  "E0046": {
+    "message": "\nItems are missing in a trait implementation. Erroneous code example:\n\n```compile_fail,E0046\ntrait Foo {\n    fn foo();\n}\n\nstruct Bar;\n\nimpl Foo for Bar {}\n// error: not all trait items implemented, missing: `foo`\n```\n\nWhen trying to make some type implement a trait `Foo`, you must, at minimum,\nprovide implementations for all of `Foo`'s required methods (meaning the\nmethods that do not have default implementations), as well as any required\ntrait items like associated types or constants. Example:\n\n```\ntrait Foo {\n    fn foo();\n}\n\nstruct Bar;\n\nimpl Foo for Bar {\n    fn foo() {} // ok!\n}\n```\n",
+    "description": "E0046"
+  },
+  "E0049": {
+    "message": "\nThis error indicates that an attempted implementation of a trait method\nhas the wrong number of type or const parameters.\n\nFor example, the trait below has a method `foo` with a type parameter `T`,\nbut the implementation of `foo` for the type `Bar` is missing this parameter:\n\n```compile_fail,E0049\ntrait Foo {\n    fn foo<T: Default>(x: T) -> Self;\n}\n\nstruct Bar;\n\n// error: method `foo` has 0 type parameters but its trait declaration has 1\n// type parameter\nimpl Foo for Bar {\n    fn foo(x: bool) -> Self { Bar }\n}\n```\n",
+    "description": "E0049"
+  },
+  "E0050": {
+    "message": "\nThis error indicates that an attempted implementation of a trait method\nhas the wrong number of function parameters.\n\nFor example, the trait below has a method `foo` with two function parameters\n(`&self` and `u8`), but the implementation of `foo` for the type `Bar` omits\nthe `u8` parameter:\n\n```compile_fail,E0050\ntrait Foo {\n    fn foo(&self, x: u8) -> bool;\n}\n\nstruct Bar;\n\n// error: method `foo` has 1 parameter but the declaration in trait `Foo::foo`\n// has 2\nimpl Foo for Bar {\n    fn foo(&self) -> bool { true }\n}\n```\n",
+    "description": "E0050"
+  },
+  "E0053": {
+    "message": "\nThe parameters of any trait method must match between a trait implementation\nand the trait definition.\n\nHere are a couple examples of this error:\n\n```compile_fail,E0053\ntrait Foo {\n    fn foo(x: u16);\n    fn bar(&self);\n}\n\nstruct Bar;\n\nimpl Foo for Bar {\n    // error, expected u16, found i16\n    fn foo(x: i16) { }\n\n    // error, types differ in mutability\n    fn bar(&mut self) { }\n}\n```\n",
+    "description": "E0053"
+  },
+  "E0054": {
+    "message": "\nIt is not allowed to cast to a bool. If you are trying to cast a numeric type\nto a bool, you can compare it with zero instead:\n\n```compile_fail,E0054\nlet x = 5;\n\n// Not allowed, won't compile\nlet x_is_nonzero = x as bool;\n```\n\n```\nlet x = 5;\n\n// Ok\nlet x_is_nonzero = x != 0;\n```\n",
+    "description": "E0054"
+  },
+  "E0055": {
+    "message": "\nDuring a method call, a value is automatically dereferenced as many times as\nneeded to make the value's type match the method's receiver. The catch is that\nthe compiler will only attempt to dereference a number of times up to the\nrecursion limit (which can be set via the `recursion_limit` attribute).\n\nFor a somewhat artificial example:\n\n```compile_fail,E0055\n#![recursion_limit=\"5\"]\n\nstruct Foo;\n\nimpl Foo {\n    fn foo(&self) {}\n}\n\nfn main() {\n    let foo = Foo;\n    let ref_foo = &&&&&Foo;\n\n    // error, reached the recursion limit while auto-dereferencing `&&&&&Foo`\n    ref_foo.foo();\n}\n```\n\nOne fix may be to increase the recursion limit. Note that it is possible to\ncreate an infinite recursion of dereferencing, in which case the only fix is to\nsomehow break the recursion.\n",
+    "description": "E0055"
+  },
+  "E0057": {
+    "message": "\nWhen invoking closures or other implementations of the function traits `Fn`,\n`FnMut` or `FnOnce` using call notation, the number of parameters passed to the\nfunction must match its definition.\n\nAn example using a closure:\n\n```compile_fail,E0057\nlet f = |x| x * 3;\nlet a = f();        // invalid, too few parameters\nlet b = f(4);       // this works!\nlet c = f(2, 3);    // invalid, too many parameters\n```\n\nA generic function must be treated similarly:\n\n```\nfn foo<F: Fn()>(f: F) {\n    f(); // this is valid, but f(3) would not work\n}\n```\n",
+    "description": "E0057"
+  },
+  "E0059": {
+    "message": "\nThe built-in function traits are generic over a tuple of the function arguments.\nIf one uses angle-bracket notation (`Fn<(T,), Output=U>`) instead of parentheses\n(`Fn(T) -> U`) to denote the function trait, the type parameter should be a\ntuple. Otherwise function call notation cannot be used and the trait will not be\nimplemented by closures.\n\nThe most likely source of this error is using angle-bracket notation without\nwrapping the function argument type into a tuple, for example:\n\n```compile_fail,E0059\n#![feature(unboxed_closures)]\n\nfn foo<F: Fn<i32>>(f: F) -> F::Output { f(3) }\n```\n\nIt can be fixed by adjusting the trait bound like this:\n\n```\n#![feature(unboxed_closures)]\n\nfn foo<F: Fn<(i32,)>>(f: F) -> F::Output { f(3) }\n```\n\nNote that `(T,)` always denotes the type of a 1-tuple containing an element of\ntype `T`. The comma is necessary for syntactic disambiguation.\n",
+    "description": "E0059"
+  },
+  "E0060": {
+    "message": "\nExternal C functions are allowed to be variadic. However, a variadic function\ntakes a minimum number of arguments. For example, consider C's variadic `printf`\nfunction:\n\n```\nuse std::os::raw::{c_char, c_int};\n\nextern \"C\" {\n    fn printf(_: *const c_char, ...) -> c_int;\n}\n```\n\nUsing this declaration, it must be called with at least one argument, so\nsimply calling `printf()` is invalid. But the following uses are allowed:\n\n```\n# #![feature(static_nobundle)]\n# use std::os::raw::{c_char, c_int};\n# #[cfg_attr(all(windows, target_env = \"msvc\"),\n#            link(name = \"legacy_stdio_definitions\", kind = \"static-nobundle\"))]\n# extern \"C\" { fn printf(_: *const c_char, ...) -> c_int; }\n# fn main() {\nunsafe {\n    use std::ffi::CString;\n\n    let fmt = CString::new(\"test\\n\").unwrap();\n    printf(fmt.as_ptr());\n\n    let fmt = CString::new(\"number = %d\\n\").unwrap();\n    printf(fmt.as_ptr(), 3);\n\n    let fmt = CString::new(\"%d, %d\\n\").unwrap();\n    printf(fmt.as_ptr(), 10, 5);\n}\n# }\n```\n",
+    "description": "E0060"
+  },
+  "E0061": {
+    "message": "\nThe number of arguments passed to a function must match the number of arguments\nspecified in the function signature.\n\nFor example, a function like:\n\n```\nfn f(a: u16, b: &str) {}\n```\n\nMust always be called with exactly two arguments, e.g., `f(2, \"test\")`.\n\nNote that Rust does not have a notion of optional function arguments or\nvariadic functions (except for its C-FFI).\n",
+    "description": "E0061"
+  },
+  "E0062": {
+    "message": "\nThis error indicates that during an attempt to build a struct or struct-like\nenum variant, one of the fields was specified more than once. Erroneous code\nexample:\n\n```compile_fail,E0062\nstruct Foo {\n    x: i32,\n}\n\nfn main() {\n    let x = Foo {\n                x: 0,\n                x: 0, // error: field `x` specified more than once\n            };\n}\n```\n\nEach field should be specified exactly one time. Example:\n\n```\nstruct Foo {\n    x: i32,\n}\n\nfn main() {\n    let x = Foo { x: 0 }; // ok!\n}\n```\n",
+    "description": "E0062"
+  },
+  "E0063": {
+    "message": "\nThis error indicates that during an attempt to build a struct or struct-like\nenum variant, one of the fields was not provided. Erroneous code example:\n\n```compile_fail,E0063\nstruct Foo {\n    x: i32,\n    y: i32,\n}\n\nfn main() {\n    let x = Foo { x: 0 }; // error: missing field: `y`\n}\n```\n\nEach field should be specified exactly once. Example:\n\n```\nstruct Foo {\n    x: i32,\n    y: i32,\n}\n\nfn main() {\n    let x = Foo { x: 0, y: 0 }; // ok!\n}\n```\n",
+    "description": "E0063"
+  },
+  "E0067": {
+    "message": "\nThe left-hand side of a compound assignment expression must be a place\nexpression. A place expression represents a memory location and includes\nitem paths (ie, namespaced variables), dereferences, indexing expressions,\nand field references.\n\nLet's start with some erroneous code examples:\n\n```compile_fail,E0067\nuse std::collections::LinkedList;\n\n// Bad: assignment to non-place expression\nLinkedList::new() += 1;\n\n// ...\n\nfn some_func(i: &mut i32) {\n    i += 12; // Error : '+=' operation cannot be applied on a reference !\n}\n```\n\nAnd now some working examples:\n\n```\nlet mut i : i32 = 0;\n\ni += 12; // Good !\n\n// ...\n\nfn some_func(i: &mut i32) {\n    *i += 12; // Good !\n}\n```\n",
+    "description": "E0067"
+  },
+  "E0069": {
+    "message": "\nThe compiler found a function whose body contains a `return;` statement but\nwhose return type is not `()`. An example of this is:\n\n```compile_fail,E0069\n// error\nfn foo() -> u8 {\n    return;\n}\n```\n\nSince `return;` is just like `return ();`, there is a mismatch between the\nfunction's return type and the value being returned.\n",
+    "description": "E0069"
+  },
+  "E0070": {
+    "message": "\nThe left-hand side of an assignment operator must be a place expression. A\nplace expression represents a memory location and can be a variable (with\noptional namespacing), a dereference, an indexing expression or a field\nreference.\n\nMore details can be found in the [Expressions] section of the Reference.\n\n[Expressions]: https://doc.rust-lang.org/reference/expressions.html#places-rvalues-and-temporaries\n\nNow, we can go further. Here are some erroneous code examples:\n\n```compile_fail,E0070\nstruct SomeStruct {\n    x: i32,\n    y: i32\n}\n\nconst SOME_CONST : i32 = 12;\n\nfn some_other_func() {}\n\nfn some_function() {\n    SOME_CONST = 14; // error : a constant value cannot be changed!\n    1 = 3; // error : 1 isn't a valid place!\n    some_other_func() = 4; // error : we can't assign value to a function!\n    SomeStruct.x = 12; // error : SomeStruct a structure name but it is used\n                       // like a variable!\n}\n```\n\nAnd now let's give working examples:\n\n```\nstruct SomeStruct {\n    x: i32,\n    y: i32\n}\nlet mut s = SomeStruct {x: 0, y: 0};\n\ns.x = 3; // that's good !\n\n// ...\n\nfn some_func(x: &mut i32) {\n    *x = 12; // that's good !\n}\n```\n",
+    "description": "E0070"
+  },
+  "E0071": {
+    "message": "\nYou tried to use structure-literal syntax to create an item that is\nnot a structure or enum variant.\n\nExample of erroneous code:\n\n```compile_fail,E0071\ntype U32 = u32;\nlet t = U32 { value: 4 }; // error: expected struct, variant or union type,\n                          // found builtin type `u32`\n```\n\nTo fix this, ensure that the name was correctly spelled, and that\nthe correct form of initializer was used.\n\nFor example, the code above can be fixed to:\n\n```\nenum Foo {\n    FirstValue(i32)\n}\n\nfn main() {\n    let u = Foo::FirstValue(0i32);\n\n    let t = 4;\n}\n```\n",
+    "description": "E0071"
+  },
+  "E0073": {
+    "message": "\n#### Note: this error code is no longer emitted by the compiler.\n\nYou cannot define a struct (or enum) `Foo` that requires an instance of `Foo`\nin order to make a new `Foo` value. This is because there would be no way a\nfirst instance of `Foo` could be made to initialize another instance!\n\nHere's an example of a struct that has this problem:\n\n```\nstruct Foo { x: Box<Foo> } // error\n```\n\nOne fix is to use `Option`, like so:\n\n```\nstruct Foo { x: Option<Box<Foo>> }\n```\n\nNow it's possible to create at least one instance of `Foo`: `Foo { x: None }`.\n",
+    "description": "E0073"
+  },
+  "E0074": {
+    "message": "\n#### Note: this error code is no longer emitted by the compiler.\n\nWhen using the `#[simd]` attribute on a tuple struct, the components of the\ntuple struct must all be of a concrete, nongeneric type so the compiler can\nreason about how to use SIMD with them. This error will occur if the types\nare generic.\n\nThis will cause an error:\n\n```\n#![feature(repr_simd)]\n\n#[repr(simd)]\nstruct Bad<T>(T, T, T);\n```\n\nThis will not:\n\n```\n#![feature(repr_simd)]\n\n#[repr(simd)]\nstruct Good(u32, u32, u32);\n```\n",
+    "description": "E0074"
+  },
+  "E0075": {
+    "message": "\nThe `#[simd]` attribute can only be applied to non empty tuple structs, because\nit doesn't make sense to try to use SIMD operations when there are no values to\noperate on.\n\nThis will cause an error:\n\n```compile_fail,E0075\n#![feature(repr_simd)]\n\n#[repr(simd)]\nstruct Bad;\n```\n\nThis will not:\n\n```\n#![feature(repr_simd)]\n\n#[repr(simd)]\nstruct Good(u32);\n```\n",
+    "description": "E0075"
+  },
+  "E0076": {
+    "message": "\nWhen using the `#[simd]` attribute to automatically use SIMD operations in tuple\nstruct, the types in the struct must all be of the same type, or the compiler\nwill trigger this error.\n\nThis will cause an error:\n\n```compile_fail,E0076\n#![feature(repr_simd)]\n\n#[repr(simd)]\nstruct Bad(u16, u32, u32);\n```\n\nThis will not:\n\n```\n#![feature(repr_simd)]\n\n#[repr(simd)]\nstruct Good(u32, u32, u32);\n```\n",
+    "description": "E0076"
+  },
+  "E0077": {
+    "message": "\nWhen using the `#[simd]` attribute on a tuple struct, the elements in the tuple\nmust be machine types so SIMD operations can be applied to them.\n\nThis will cause an error:\n\n```compile_fail,E0077\n#![feature(repr_simd)]\n\n#[repr(simd)]\nstruct Bad(String);\n```\n\nThis will not:\n\n```\n#![feature(repr_simd)]\n\n#[repr(simd)]\nstruct Good(u32, u32, u32);\n```\n",
+    "description": "E0077"
+  },
+  "E0081": {
+    "message": "\nEnum discriminants are used to differentiate enum variants stored in memory.\nThis error indicates that the same value was used for two or more variants,\nmaking them impossible to tell apart.\n\n```compile_fail,E0081\n// Bad.\nenum Enum {\n    P = 3,\n    X = 3,\n    Y = 5,\n}\n```\n\n```\n// Good.\nenum Enum {\n    P,\n    X = 3,\n    Y = 5,\n}\n```\n\nNote that variants without a manually specified discriminant are numbered from\ntop to bottom starting from 0, so clashes can occur with seemingly unrelated\nvariants.\n\n```compile_fail,E0081\nenum Bad {\n    X,\n    Y = 0\n}\n```\n\nHere `X` will have already been specified the discriminant 0 by the time `Y` is\nencountered, so a conflict occurs.\n",
+    "description": "E0081"
+  },
+  "E0084": {
+    "message": "\nAn unsupported representation was attempted on a zero-variant enum.\n\nErroneous code example:\n\n```compile_fail,E0084\n#[repr(i32)]\nenum NightsWatch {} // error: unsupported representation for zero-variant enum\n```\n\nIt is impossible to define an integer type to be used to represent zero-variant\nenum values because there are no zero-variant enum values. There is no way to\nconstruct an instance of the following type using only safe code. So you have\ntwo solutions. Either you add variants in your enum:\n\n```\n#[repr(i32)]\nenum NightsWatch {\n    JonSnow,\n    Commander,\n}\n```\n\nor you remove the integer represention of your enum:\n\n```\nenum NightsWatch {}\n```\n",
+    "description": "E0084"
+  },
+  "E0087": {
+    "message": "\n#### Note: this error code is no longer emitted by the compiler.\n\nToo many type arguments were supplied for a function. For example:\n\n```compile_fail,E0107\nfn foo<T>() {}\n\nfn main() {\n    foo::<f64, bool>(); // error: wrong number of type arguments:\n                        //        expected 1, found 2\n}\n```\n\nThe number of supplied arguments must exactly match the number of defined type\nparameters.\n",
+    "description": "E0087"
+  },
+  "E0088": {
+    "message": "\n#### Note: this error code is no longer emitted by the compiler.\n\nYou gave too many lifetime arguments. Erroneous code example:\n\n```compile_fail,E0107\nfn f() {}\n\nfn main() {\n    f::<'static>() // error: wrong number of lifetime arguments:\n                   //        expected 0, found 1\n}\n```\n\nPlease check you give the right number of lifetime arguments. Example:\n\n```\nfn f() {}\n\nfn main() {\n    f() // ok!\n}\n```\n\nIt's also important to note that the Rust compiler can generally\ndetermine the lifetime by itself. Example:\n\n```\nstruct Foo {\n    value: String\n}\n\nimpl Foo {\n    // it can be written like this\n    fn get_value<'a>(&'a self) -> &'a str { &self.value }\n    // but the compiler works fine with this too:\n    fn without_lifetime(&self) -> &str { &self.value }\n}\n\nfn main() {\n    let f = Foo { value: \"hello\".to_owned() };\n\n    println!(\"{}\", f.get_value());\n    println!(\"{}\", f.without_lifetime());\n}\n```\n",
+    "description": "E0088"
+  },
+  "E0089": {
+    "message": "\n#### Note: this error code is no longer emitted by the compiler.\n\nToo few type arguments were supplied for a function. For example:\n\n```compile_fail,E0107\nfn foo<T, U>() {}\n\nfn main() {\n    foo::<f64>(); // error: wrong number of type arguments: expected 2, found 1\n}\n```\n\nNote that if a function takes multiple type arguments but you want the compiler\nto infer some of them, you can use type placeholders:\n\n```compile_fail,E0107\nfn foo<T, U>(x: T) {}\n\nfn main() {\n    let x: bool = true;\n    foo::<f64>(x);    // error: wrong number of type arguments:\n                      //        expected 2, found 1\n    foo::<_, f64>(x); // same as `foo::<bool, f64>(x)`\n}\n```\n",
+    "description": "E0089"
+  },
+  "E0090": {
+    "message": "\n#### Note: this error code is no longer emitted by the compiler.\n\nYou gave too few lifetime arguments. Example:\n\n```compile_fail,E0107\nfn foo<'a: 'b, 'b: 'a>() {}\n\nfn main() {\n    foo::<'static>(); // error: wrong number of lifetime arguments:\n                      //        expected 2, found 1\n}\n```\n\nPlease check you give the right number of lifetime arguments. Example:\n\n```\nfn foo<'a: 'b, 'b: 'a>() {}\n\nfn main() {\n    foo::<'static, 'static>();\n}\n```\n",
+    "description": "E0090"
+  },
+  "E0091": {
+    "message": "\nYou gave an unnecessary type or const parameter in a type alias. Erroneous\ncode example:\n\n```compile_fail,E0091\ntype Foo<T> = u32; // error: type parameter `T` is unused\n// or:\ntype Foo<A,B> = Box<A>; // error: type parameter `B` is unused\n```\n\nPlease check you didn't write too many parameters. Example:\n\n```\ntype Foo = u32; // ok!\ntype Foo2<A> = Box<A>; // ok!\n```\n",
+    "description": "E0091"
+  },
+  "E0092": {
+    "message": "\nYou tried to declare an undefined atomic operation function.\nErroneous code example:\n\n```compile_fail,E0092\n#![feature(intrinsics)]\n\nextern \"rust-intrinsic\" {\n    fn atomic_foo(); // error: unrecognized atomic operation\n                     //        function\n}\n```\n\nPlease check you didn't make a mistake in the function's name. All intrinsic\nfunctions are defined in librustc_codegen_llvm/intrinsic.rs and in\nlibcore/intrinsics.rs in the Rust source code. Example:\n\n```\n#![feature(intrinsics)]\n\nextern \"rust-intrinsic\" {\n    fn atomic_fence(); // ok!\n}\n```\n",
+    "description": "E0092"
+  },
+  "E0093": {
+    "message": "\nYou declared an unknown intrinsic function. Erroneous code example:\n\n```compile_fail,E0093\n#![feature(intrinsics)]\n\nextern \"rust-intrinsic\" {\n    fn foo(); // error: unrecognized intrinsic function: `foo`\n}\n\nfn main() {\n    unsafe {\n        foo();\n    }\n}\n```\n\nPlease check you didn't make a mistake in the function's name. All intrinsic\nfunctions are defined in librustc_codegen_llvm/intrinsic.rs and in\nlibcore/intrinsics.rs in the Rust source code. Example:\n\n```\n#![feature(intrinsics)]\n\nextern \"rust-intrinsic\" {\n    fn atomic_fence(); // ok!\n}\n\nfn main() {\n    unsafe {\n        atomic_fence();\n    }\n}\n```\n",
+    "description": "E0093"
+  },
+  "E0094": {
+    "message": "\nYou gave an invalid number of type parameters to an intrinsic function.\nErroneous code example:\n\n```compile_fail,E0094\n#![feature(intrinsics)]\n\nextern \"rust-intrinsic\" {\n    fn size_of<T, U>() -> usize; // error: intrinsic has wrong number\n                                 //        of type parameters\n}\n```\n\nPlease check that you provided the right number of type parameters\nand verify with the function declaration in the Rust source code.\nExample:\n\n```\n#![feature(intrinsics)]\n\nextern \"rust-intrinsic\" {\n    fn size_of<T>() -> usize; // ok!\n}\n```\n",
+    "description": "E0094"
+  },
+  "E0107": {
+    "message": "\nThis error means that an incorrect number of generic arguments were provided:\n\n```compile_fail,E0107\nstruct Foo<T> { x: T }\n\nstruct Bar { x: Foo }             // error: wrong number of type arguments:\n                                  //        expected 1, found 0\nstruct Baz<S, T> { x: Foo<S, T> } // error: wrong number of type arguments:\n                                  //        expected 1, found 2\n\nfn foo<T, U>(x: T, y: U) {}\n\nfn main() {\n    let x: bool = true;\n    foo::<bool>(x);                 // error: wrong number of type arguments:\n                                    //        expected 2, found 1\n    foo::<bool, i32, i32>(x, 2, 4); // error: wrong number of type arguments:\n                                    //        expected 2, found 3\n}\n\nfn f() {}\n\nfn main() {\n    f::<'static>(); // error: wrong number of lifetime arguments:\n                    //        expected 0, found 1\n}\n```\n\n",
+    "description": "E0107"
+  },
+  "E0109": {
+    "message": "\nYou tried to provide a generic argument to a type which doesn't need it.\nErroneous code example:\n\n```compile_fail,E0109\ntype X = u32<i32>; // error: type arguments are not allowed for this type\ntype Y = bool<'static>; // error: lifetime parameters are not allowed on\n                        //        this type\n```\n\nCheck that you used the correct argument and that the definition is correct.\n\nExample:\n\n```\ntype X = u32; // ok!\ntype Y = bool; // ok!\n```\n\nNote that generic arguments for enum variant constructors go after the variant,\nnot after the enum. For example, you would write `Option::None::<u32>`,\nrather than `Option::<u32>::None`.\n",
+    "description": "E0109"
+  },
+  "E0110": {
+    "message": "\n#### Note: this error code is no longer emitted by the compiler.\n\nYou tried to provide a lifetime to a type which doesn't need it.\nSee `E0109` for more details.\n",
+    "description": "E0110"
+  },
+  "E0116": {
+    "message": "\nYou can only define an inherent implementation for a type in the same crate\nwhere the type was defined. For example, an `impl` block as below is not allowed\nsince `Vec` is defined in the standard library:\n\n```compile_fail,E0116\nimpl Vec<u8> { } // error\n```\n\nTo fix this problem, you can do either of these things:\n\n - define a trait that has the desired associated functions/types/constants and\n   implement the trait for the type in question\n - define a new type wrapping the type and define an implementation on the new\n   type\n\nNote that using the `type` keyword does not work here because `type` only\nintroduces a type alias:\n\n```compile_fail,E0116\ntype Bytes = Vec<u8>;\n\nimpl Bytes { } // error, same as above\n```\n",
+    "description": "E0116"
+  },
+  "E0117": {
+    "message": "\nThis error indicates a violation of one of Rust's orphan rules for trait\nimplementations. The rule prohibits any implementation of a foreign trait (a\ntrait defined in another crate) where\n\n - the type that is implementing the trait is foreign\n - all of the parameters being passed to the trait (if there are any) are also\n   foreign.\n\nHere's one example of this error:\n\n```compile_fail,E0117\nimpl Drop for u32 {}\n```\n\nTo avoid this kind of error, ensure that at least one local type is referenced\nby the `impl`:\n\n```\npub struct Foo; // you define your type in your crate\n\nimpl Drop for Foo { // and you can implement the trait on it!\n    // code of trait implementation here\n#   fn drop(&mut self) { }\n}\n\nimpl From<Foo> for i32 { // or you use a type from your crate as\n                         // a type parameter\n    fn from(i: Foo) -> i32 {\n        0\n    }\n}\n```\n\nAlternatively, define a trait locally and implement that instead:\n\n```\ntrait Bar {\n    fn get(&self) -> usize;\n}\n\nimpl Bar for u32 {\n    fn get(&self) -> usize { 0 }\n}\n```\n\nFor information on the design of the orphan rules, see [RFC 1023].\n\n[RFC 1023]: https://github.com/rust-lang/rfcs/blob/master/text/1023-rebalancing-coherence.md\n",
+    "description": "E0117"
+  },
+  "E0118": {
+    "message": "\nYou're trying to write an inherent implementation for something which isn't a\nstruct nor an enum. Erroneous code example:\n\n```compile_fail,E0118\nimpl (u8, u8) { // error: no base type found for inherent implementation\n    fn get_state(&self) -> String {\n        // ...\n    }\n}\n```\n\nTo fix this error, please implement a trait on the type or wrap it in a struct.\nExample:\n\n```\n// we create a trait here\ntrait LiveLongAndProsper {\n    fn get_state(&self) -> String;\n}\n\n// and now you can implement it on (u8, u8)\nimpl LiveLongAndProsper for (u8, u8) {\n    fn get_state(&self) -> String {\n        \"He's dead, Jim!\".to_owned()\n    }\n}\n```\n\nAlternatively, you can create a newtype. A newtype is a wrapping tuple-struct.\nFor example, `NewType` is a newtype over `Foo` in `struct NewType(Foo)`.\nExample:\n\n```\nstruct TypeWrapper((u8, u8));\n\nimpl TypeWrapper {\n    fn get_state(&self) -> String {\n        \"Fascinating!\".to_owned()\n    }\n}\n```\n",
+    "description": "E0118"
+  },
+  "E0120": {
+    "message": "\nAn attempt was made to implement Drop on a trait, which is not allowed: only\nstructs and enums can implement Drop. An example causing this error:\n\n```compile_fail,E0120\ntrait MyTrait {}\n\nimpl Drop for MyTrait {\n    fn drop(&mut self) {}\n}\n```\n\nA workaround for this problem is to wrap the trait up in a struct, and implement\nDrop on that. An example is shown below:\n\n```\ntrait MyTrait {}\nstruct MyWrapper<T: MyTrait> { foo: T }\n\nimpl <T: MyTrait> Drop for MyWrapper<T> {\n    fn drop(&mut self) {}\n}\n\n```\n\nAlternatively, wrapping trait objects requires something like the following:\n\n```\ntrait MyTrait {}\n\n//or Box<MyTrait>, if you wanted an owned trait object\nstruct MyWrapper<'a> { foo: &'a MyTrait }\n\nimpl <'a> Drop for MyWrapper<'a> {\n    fn drop(&mut self) {}\n}\n```\n",
+    "description": "E0120"
+  },
+  "E0121": {
+    "message": "\nIn order to be consistent with Rust's lack of global type inference, type\nplaceholders are disallowed by design in item signatures.\n\nExamples of this error include:\n\n```compile_fail,E0121\nfn foo() -> _ { 5 } // error, explicitly write out the return type instead\n\nstatic BAR: _ = \"test\"; // error, explicitly write out the type instead\n```\n",
+    "description": "E0121"
+  },
+  "E0124": {
+    "message": "\nYou declared two fields of a struct with the same name. Erroneous code\nexample:\n\n```compile_fail,E0124\nstruct Foo {\n    field1: i32,\n    field1: i32, // error: field is already declared\n}\n```\n\nPlease verify that the field names have been correctly spelled. Example:\n\n```\nstruct Foo {\n    field1: i32,\n    field2: i32, // ok!\n}\n```\n",
+    "description": "E0124"
+  },
+  "E0131": {
+    "message": "\nIt is not possible to define `main` with generic parameters.\nWhen `main` is present, it must take no arguments and return `()`.\nErroneous code example:\n\n```compile_fail,E0131\nfn main<T>() { // error: main function is not allowed to have generic parameters\n}\n```\n",
+    "description": "E0131"
+  },
+  "E0132": {
+    "message": "\nA function with the `start` attribute was declared with type parameters.\n\nErroneous code example:\n\n```compile_fail,E0132\n#![feature(start)]\n\n#[start]\nfn f<T>() {}\n```\n\nIt is not possible to declare type parameters on a function that has the `start`\nattribute. Such a function must have the following type signature (for more\ninformation, view [the unstable book][1]):\n\n[1]: https://doc.rust-lang.org/unstable-book/language-features/lang-items.html#writing-an-executable-without-stdlib\n\n```\n# let _:\nfn(isize, *const *const u8) -> isize;\n```\n\nExample:\n\n```\n#![feature(start)]\n\n#[start]\nfn my_start(argc: isize, argv: *const *const u8) -> isize {\n    0\n}\n```\n",
+    "description": "E0132"
+  },
+  "E0164": {
+    "message": "\nThis error means that an attempt was made to match a struct type enum\nvariant as a non-struct type:\n\n```compile_fail,E0164\nenum Foo { B { i: u32 } }\n\nfn bar(foo: Foo) -> u32 {\n    match foo {\n        Foo::B(i) => i, // error E0164\n    }\n}\n```\n\nTry using `{}` instead:\n\n```\nenum Foo { B { i: u32 } }\n\nfn bar(foo: Foo) -> u32 {\n    match foo {\n        Foo::B{i} => i,\n    }\n}\n```\n",
+    "description": "E0164"
+  },
+  "E0184": {
+    "message": "\nExplicitly implementing both Drop and Copy for a type is currently disallowed.\nThis feature can make some sense in theory, but the current implementation is\nincorrect and can lead to memory unsafety (see [issue #20126][iss20126]), so\nit has been disabled for now.\n\n[iss20126]: https://github.com/rust-lang/rust/issues/20126\n",
+    "description": "E0184"
+  },
+  "E0185": {
+    "message": "\nAn associated function for a trait was defined to be static, but an\nimplementation of the trait declared the same function to be a method (i.e., to\ntake a `self` parameter).\n\nHere's an example of this error:\n\n```compile_fail,E0185\ntrait Foo {\n    fn foo();\n}\n\nstruct Bar;\n\nimpl Foo for Bar {\n    // error, method `foo` has a `&self` declaration in the impl, but not in\n    // the trait\n    fn foo(&self) {}\n}\n```\n",
+    "description": "E0185"
+  },
+  "E0186": {
+    "message": "\nAn associated function for a trait was defined to be a method (i.e., to take a\n`self` parameter), but an implementation of the trait declared the same function\nto be static.\n\nHere's an example of this error:\n\n```compile_fail,E0186\ntrait Foo {\n    fn foo(&self);\n}\n\nstruct Bar;\n\nimpl Foo for Bar {\n    // error, method `foo` has a `&self` declaration in the trait, but not in\n    // the impl\n    fn foo() {}\n}\n```\n",
+    "description": "E0186"
+  },
+  "E0191": {
+    "message": "\nTrait objects need to have all associated types specified. Erroneous code\nexample:\n\n```compile_fail,E0191\ntrait Trait {\n    type Bar;\n}\n\ntype Foo = Trait; // error: the value of the associated type `Bar` (from\n                  //        the trait `Trait`) must be specified\n```\n\nPlease verify you specified all associated types of the trait and that you\nused the right trait. Example:\n\n```\ntrait Trait {\n    type Bar;\n}\n\ntype Foo = Trait<Bar=i32>; // ok!\n```\n",
+    "description": "E0191"
+  },
+  "E0192": {
+    "message": "\nNegative impls are only allowed for auto traits. For more\ninformation see the [opt-in builtin traits RFC][RFC 19].\n\n[RFC 19]: https://github.com/rust-lang/rfcs/blob/master/text/0019-opt-in-builtin-traits.md\n",
+    "description": "E0192"
+  },
+  "E0193": {
+    "message": "\n#### Note: this error code is no longer emitted by the compiler.\n\n`where` clauses must use generic type parameters: it does not make sense to use\nthem otherwise. An example causing this error:\n\n```\ntrait Foo {\n    fn bar(&self);\n}\n\n#[derive(Copy,Clone)]\nstruct Wrapper<T> {\n    Wrapped: T\n}\n\nimpl Foo for Wrapper<u32> where Wrapper<u32>: Clone {\n    fn bar(&self) { }\n}\n```\n\nThis use of a `where` clause is strange - a more common usage would look\nsomething like the following:\n\n```\ntrait Foo {\n    fn bar(&self);\n}\n\n#[derive(Copy,Clone)]\nstruct Wrapper<T> {\n    Wrapped: T\n}\nimpl <T> Foo for Wrapper<T> where Wrapper<T>: Clone {\n    fn bar(&self) { }\n}\n```\n\nHere, we're saying that the implementation exists on Wrapper only when the\nwrapped type `T` implements `Clone`. The `where` clause is important because\nsome types will not implement `Clone`, and thus will not get this method.\n\nIn our erroneous example, however, we're referencing a single concrete type.\nSince we know for certain that `Wrapper<u32>` implements `Clone`, there's no\nreason to also specify it in a `where` clause.\n",
+    "description": "E0193"
+  },
+  "E0194": {
+    "message": "\nA type parameter was declared which shadows an existing one. An example of this\nerror:\n\n```compile_fail,E0194\ntrait Foo<T> {\n    fn do_something(&self) -> T;\n    fn do_something_else<T: Clone>(&self, bar: T);\n}\n```\n\nIn this example, the trait `Foo` and the trait method `do_something_else` both\ndefine a type parameter `T`. This is not allowed: if the method wishes to\ndefine a type parameter, it must use a different name for it.\n",
+    "description": "E0194"
+  },
+  "E0195": {
+    "message": "\nYour method's lifetime parameters do not match the trait declaration.\nErroneous code example:\n\n```compile_fail,E0195\ntrait Trait {\n    fn bar<'a,'b:'a>(x: &'a str, y: &'b str);\n}\n\nstruct Foo;\n\nimpl Trait for Foo {\n    fn bar<'a,'b>(x: &'a str, y: &'b str) {\n    // error: lifetime parameters or bounds on method `bar`\n    // do not match the trait declaration\n    }\n}\n```\n\nThe lifetime constraint `'b` for bar() implementation does not match the\ntrait declaration. Ensure lifetime declarations match exactly in both trait\ndeclaration and implementation. Example:\n\n```\ntrait Trait {\n    fn t<'a,'b:'a>(x: &'a str, y: &'b str);\n}\n\nstruct Foo;\n\nimpl Trait for Foo {\n    fn t<'a,'b:'a>(x: &'a str, y: &'b str) { // ok!\n    }\n}\n```\n",
+    "description": "E0195"
+  },
+  "E0199": {
+    "message": "\nSafe traits should not have unsafe implementations, therefore marking an\nimplementation for a safe trait unsafe will cause a compiler error. Removing\nthe unsafe marker on the trait noted in the error will resolve this problem.\n\n```compile_fail,E0199\nstruct Foo;\n\ntrait Bar { }\n\n// this won't compile because Bar is safe\nunsafe impl Bar for Foo { }\n// this will compile\nimpl Bar for Foo { }\n```\n",
+    "description": "E0199"
+  },
+  "E0200": {
+    "message": "\nUnsafe traits must have unsafe implementations. This error occurs when an\nimplementation for an unsafe trait isn't marked as unsafe. This may be resolved\nby marking the unsafe implementation as unsafe.\n\n```compile_fail,E0200\nstruct Foo;\n\nunsafe trait Bar { }\n\n// this won't compile because Bar is unsafe and impl isn't unsafe\nimpl Bar for Foo { }\n// this will compile\nunsafe impl Bar for Foo { }\n```\n",
+    "description": "E0200"
+  },
+  "E0201": {
+    "message": "\nIt is an error to define two associated items (like methods, associated types,\nassociated functions, etc.) with the same identifier.\n\nFor example:\n\n```compile_fail,E0201\nstruct Foo(u8);\n\nimpl Foo {\n    fn bar(&self) -> bool { self.0 > 5 }\n    fn bar() {} // error: duplicate associated function\n}\n\ntrait Baz {\n    type Quux;\n    fn baz(&self) -> bool;\n}\n\nimpl Baz for Foo {\n    type Quux = u32;\n\n    fn baz(&self) -> bool { true }\n\n    // error: duplicate method\n    fn baz(&self) -> bool { self.0 > 5 }\n\n    // error: duplicate associated type\n    type Quux = u32;\n}\n```\n\nNote, however, that items with the same name are allowed for inherent `impl`\nblocks that don't overlap:\n\n```\nstruct Foo<T>(T);\n\nimpl Foo<u8> {\n    fn bar(&self) -> bool { self.0 > 5 }\n}\n\nimpl Foo<bool> {\n    fn bar(&self) -> bool { self.0 }\n}\n```\n",
+    "description": "E0201"
+  },
+  "E0202": {
+    "message": "\nInherent associated types were part of [RFC 195] but are not yet implemented.\nSee [the tracking issue][iss8995] for the status of this implementation.\n\n[RFC 195]: https://github.com/rust-lang/rfcs/blob/master/text/0195-associated-items.md\n[iss8995]: https://github.com/rust-lang/rust/issues/8995\n",
+    "description": "E0202"
+  },
+  "E0204": {
+    "message": "\nAn attempt to implement the `Copy` trait for a struct failed because one of the\nfields does not implement `Copy`. To fix this, you must implement `Copy` for the\nmentioned field. Note that this may not be possible, as in the example of\n\n```compile_fail,E0204\nstruct Foo {\n    foo : Vec<u32>,\n}\n\nimpl Copy for Foo { }\n```\n\nThis fails because `Vec<T>` does not implement `Copy` for any `T`.\n\nHere's another example that will fail:\n\n```compile_fail,E0204\n#[derive(Copy)]\nstruct Foo<'a> {\n    ty: &'a mut bool,\n}\n```\n\nThis fails because `&mut T` is not `Copy`, even when `T` is `Copy` (this\ndiffers from the behavior for `&T`, which is always `Copy`).\n",
+    "description": "E0204"
+  },
+  "E0206": {
+    "message": "\nYou can only implement `Copy` for a struct or enum. Both of the following\nexamples will fail, because neither `[u8; 256]` nor `&'static mut Bar`\n(mutable reference to `Bar`) is a struct or enum:\n\n```compile_fail,E0206\ntype Foo = [u8; 256];\nimpl Copy for Foo { } // error\n\n#[derive(Copy, Clone)]\nstruct Bar;\nimpl Copy for &'static mut Bar { } // error\n```\n",
+    "description": "E0206"
+  },
+  "E0207": {
+    "message": "\nAny type parameter or lifetime parameter of an `impl` must meet at least one of\nthe following criteria:\n\n - it appears in the _implementing type_ of the impl, e.g. `impl<T> Foo<T>`\n - for a trait impl, it appears in the _implemented trait_, e.g.\n   `impl<T> SomeTrait<T> for Foo`\n - it is bound as an associated type, e.g. `impl<T, U> SomeTrait for T\n   where T: AnotherTrait<AssocType=U>`\n\n### Error example 1\n\nSuppose we have a struct `Foo` and we would like to define some methods for it.\nThe following definition leads to a compiler error:\n\n```compile_fail,E0207\nstruct Foo;\n\nimpl<T: Default> Foo {\n// error: the type parameter `T` is not constrained by the impl trait, self\n// type, or predicates [E0207]\n    fn get(&self) -> T {\n        <T as Default>::default()\n    }\n}\n```\n\nThe problem is that the parameter `T` does not appear in the implementing type\n(`Foo`) of the impl. In this case, we can fix the error by moving the type\nparameter from the `impl` to the method `get`:\n\n\n```\nstruct Foo;\n\n// Move the type parameter from the impl to the method\nimpl Foo {\n    fn get<T: Default>(&self) -> T {\n        <T as Default>::default()\n    }\n}\n```\n\n### Error example 2\n\nAs another example, suppose we have a `Maker` trait and want to establish a\ntype `FooMaker` that makes `Foo`s:\n\n```compile_fail,E0207\ntrait Maker {\n    type Item;\n    fn make(&mut self) -> Self::Item;\n}\n\nstruct Foo<T> {\n    foo: T\n}\n\nstruct FooMaker;\n\nimpl<T: Default> Maker for FooMaker {\n// error: the type parameter `T` is not constrained by the impl trait, self\n// type, or predicates [E0207]\n    type Item = Foo<T>;\n\n    fn make(&mut self) -> Foo<T> {\n        Foo { foo: <T as Default>::default() }\n    }\n}\n```\n\nThis fails to compile because `T` does not appear in the trait or in the\nimplementing type.\n\nOne way to work around this is to introduce a phantom type parameter into\n`FooMaker`, like so:\n\n```\nuse std::marker::PhantomData;\n\ntrait Maker {\n    type Item;\n    fn make(&mut self) -> Self::Item;\n}\n\nstruct Foo<T> {\n    foo: T\n}\n\n// Add a type parameter to `FooMaker`\nstruct FooMaker<T> {\n    phantom: PhantomData<T>,\n}\n\nimpl<T: Default> Maker for FooMaker<T> {\n    type Item = Foo<T>;\n\n    fn make(&mut self) -> Foo<T> {\n        Foo {\n            foo: <T as Default>::default(),\n        }\n    }\n}\n```\n\nAnother way is to do away with the associated type in `Maker` and use an input\ntype parameter instead:\n\n```\n// Use a type parameter instead of an associated type here\ntrait Maker<Item> {\n    fn make(&mut self) -> Item;\n}\n\nstruct Foo<T> {\n    foo: T\n}\n\nstruct FooMaker;\n\nimpl<T: Default> Maker<Foo<T>> for FooMaker {\n    fn make(&mut self) -> Foo<T> {\n        Foo { foo: <T as Default>::default() }\n    }\n}\n```\n\n### Additional information\n\nFor more information, please see [RFC 447].\n\n[RFC 447]: https://github.com/rust-lang/rfcs/blob/master/text/0447-no-unused-impl-parameters.md\n",
+    "description": "E0207"
+  },
+  "E0210": {
+    "message": "\nThis error indicates a violation of one of Rust's orphan rules for trait\nimplementations. The rule concerns the use of type parameters in an\nimplementation of a foreign trait (a trait defined in another crate), and\nstates that type parameters must be \"covered\" by a local type. To understand\nwhat this means, it is perhaps easiest to consider a few examples.\n\nIf `ForeignTrait` is a trait defined in some external crate `foo`, then the\nfollowing trait `impl` is an error:\n\n```compile_fail,E0210\n# #[cfg(for_demonstration_only)]\nextern crate foo;\n# #[cfg(for_demonstration_only)]\nuse foo::ForeignTrait;\n# use std::panic::UnwindSafe as ForeignTrait;\n\nimpl<T> ForeignTrait for T { } // error\n# fn main() {}\n```\n\nTo work around this, it can be covered with a local type, `MyType`:\n\n```\n# use std::panic::UnwindSafe as ForeignTrait;\nstruct MyType<T>(T);\nimpl<T> ForeignTrait for MyType<T> { } // Ok\n```\n\nPlease note that a type alias is not sufficient.\n\nFor another example of an error, suppose there's another trait defined in `foo`\nnamed `ForeignTrait2` that takes two type parameters. Then this `impl` results\nin the same rule violation:\n\n```ignore (cannot-doctest-multicrate-project)\nstruct MyType2;\nimpl<T> ForeignTrait2<T, MyType<T>> for MyType2 { } // error\n```\n\nThe reason for this is that there are two appearances of type parameter `T` in\nthe `impl` header, both as parameters for `ForeignTrait2`. The first appearance\nis uncovered, and so runs afoul of the orphan rule.\n\nConsider one more example:\n\n```ignore (cannot-doctest-multicrate-project)\nimpl<T> ForeignTrait2<MyType<T>, T> for MyType2 { } // Ok\n```\n\nThis only differs from the previous `impl` in that the parameters `T` and\n`MyType<T>` for `ForeignTrait2` have been swapped. This example does *not*\nviolate the orphan rule; it is permitted.\n\nTo see why that last example was allowed, you need to understand the general\nrule. Unfortunately this rule is a bit tricky to state. Consider an `impl`:\n\n```ignore (only-for-syntax-highlight)\nimpl<P1, ..., Pm> ForeignTrait<T1, ..., Tn> for T0 { ... }\n```\n\nwhere `P1, ..., Pm` are the type parameters of the `impl` and `T0, ..., Tn`\nare types. One of the types `T0, ..., Tn` must be a local type (this is another\norphan rule, see the explanation for E0117). Let `i` be the smallest integer\nsuch that `Ti` is a local type. Then no type parameter can appear in any of the\n`Tj` for `j < i`.\n\nFor information on the design of the orphan rules, see [RFC 1023].\n\n[RFC 1023]: https://github.com/rust-lang/rfcs/blob/master/text/1023-rebalancing-coherence.md\n",
+    "description": "E0210"
+  },
+  "E0220": {
+    "message": "\nYou used an associated type which isn't defined in the trait.\nErroneous code example:\n\n```compile_fail,E0220\ntrait T1 {\n    type Bar;\n}\n\ntype Foo = T1<F=i32>; // error: associated type `F` not found for `T1`\n\n// or:\n\ntrait T2 {\n    type Bar;\n\n    // error: Baz is used but not declared\n    fn return_bool(&self, _: &Self::Bar, _: &Self::Baz) -> bool;\n}\n```\n\nMake sure that you have defined the associated type in the trait body.\nAlso, verify that you used the right trait or you didn't misspell the\nassociated type name. Example:\n\n```\ntrait T1 {\n    type Bar;\n}\n\ntype Foo = T1<Bar=i32>; // ok!\n\n// or:\n\ntrait T2 {\n    type Bar;\n    type Baz; // we declare `Baz` in our trait.\n\n    // and now we can use it here:\n    fn return_bool(&self, _: &Self::Bar, _: &Self::Baz) -> bool;\n}\n```\n",
+    "description": "E0220"
+  },
+  "E0221": {
+    "message": "\nAn attempt was made to retrieve an associated type, but the type was ambiguous.\nFor example:\n\n```compile_fail,E0221\ntrait T1 {}\ntrait T2 {}\n\ntrait Foo {\n    type A: T1;\n}\n\ntrait Bar : Foo {\n    type A: T2;\n    fn do_something() {\n        let _: Self::A;\n    }\n}\n```\n\nIn this example, `Foo` defines an associated type `A`. `Bar` inherits that type\nfrom `Foo`, and defines another associated type of the same name. As a result,\nwhen we attempt to use `Self::A`, it's ambiguous whether we mean the `A` defined\nby `Foo` or the one defined by `Bar`.\n\nThere are two options to work around this issue. The first is simply to rename\none of the types. Alternatively, one can specify the intended type using the\nfollowing syntax:\n\n```\ntrait T1 {}\ntrait T2 {}\n\ntrait Foo {\n    type A: T1;\n}\n\ntrait Bar : Foo {\n    type A: T2;\n    fn do_something() {\n        let _: <Self as Bar>::A;\n    }\n}\n```\n",
+    "description": "E0221"
+  },
+  "E0223": {
+    "message": "\nAn attempt was made to retrieve an associated type, but the type was ambiguous.\nFor example:\n\n```compile_fail,E0223\ntrait MyTrait {type X; }\n\nfn main() {\n    let foo: MyTrait::X;\n}\n```\n\nThe problem here is that we're attempting to take the type of X from MyTrait.\nUnfortunately, the type of X is not defined, because it's only made concrete in\nimplementations of the trait. A working version of this code might look like:\n\n```\ntrait MyTrait {type X; }\nstruct MyStruct;\n\nimpl MyTrait for MyStruct {\n    type X = u32;\n}\n\nfn main() {\n    let foo: <MyStruct as MyTrait>::X;\n}\n```\n\nThis syntax specifies that we want the X type from MyTrait, as made concrete in\nMyStruct. The reason that we cannot simply use `MyStruct::X` is that MyStruct\nmight implement two different traits with identically-named associated types.\nThis syntax allows disambiguation between the two.\n",
+    "description": "E0223"
+  },
+  "E0225": {
+    "message": "\nYou attempted to use multiple types as bounds for a closure or trait object.\nRust does not currently support this. A simple example that causes this error:\n\n```compile_fail,E0225\nfn main() {\n    let _: Box<dyn std::io::Read + std::io::Write>;\n}\n```\n\nAuto traits such as Send and Sync are an exception to this rule:\nIt's possible to have bounds of one non-builtin trait, plus any number of\nauto traits. For example, the following compiles correctly:\n\n```\nfn main() {\n    let _: Box<dyn std::io::Read + Send + Sync>;\n}\n```\n",
+    "description": "E0225"
+  },
+  "E0229": {
+    "message": "\nAn associated type binding was done outside of the type parameter declaration\nand `where` clause. Erroneous code example:\n\n```compile_fail,E0229\npub trait Foo {\n    type A;\n    fn boo(&self) -> <Self as Foo>::A;\n}\n\nstruct Bar;\n\nimpl Foo for isize {\n    type A = usize;\n    fn boo(&self) -> usize { 42 }\n}\n\nfn baz<I>(x: &<I as Foo<A=Bar>>::A) {}\n// error: associated type bindings are not allowed here\n```\n\nTo solve this error, please move the type bindings in the type parameter\ndeclaration:\n\n```\n# struct Bar;\n# trait Foo { type A; }\nfn baz<I: Foo<A=Bar>>(x: &<I as Foo>::A) {} // ok!\n```\n\nOr in the `where` clause:\n\n```\n# struct Bar;\n# trait Foo { type A; }\nfn baz<I>(x: &<I as Foo>::A) where I: Foo<A=Bar> {}\n```\n",
+    "description": "E0229"
+  },
+  "E0243": {
+    "message": "\n#### Note: this error code is no longer emitted by the compiler.\n\nThis error indicates that not enough type parameters were found in a type or\ntrait.\n\nFor example, the `Foo` struct below is defined to be generic in `T`, but the\ntype parameter is missing in the definition of `Bar`:\n\n```compile_fail,E0107\nstruct Foo<T> { x: T }\n\nstruct Bar { x: Foo }\n```\n",
+    "description": "E0243"
+  },
+  "E0244": {
+    "message": "\n#### Note: this error code is no longer emitted by the compiler.\n\nThis error indicates that too many type parameters were found in a type or\ntrait.\n\nFor example, the `Foo` struct below has no type parameters, but is supplied\nwith two in the definition of `Bar`:\n\n```compile_fail,E0107\nstruct Foo { x: bool }\n\nstruct Bar<S, T> { x: Foo<S, T> }\n```\n",
+    "description": "E0244"
+  },
+  "E0321": {
+    "message": "\nA cross-crate opt-out trait was implemented on something which wasn't a struct\nor enum type. Erroneous code example:\n\n```compile_fail,E0321\n#![feature(optin_builtin_traits)]\n\nstruct Foo;\n\nimpl !Sync for Foo {}\n\nunsafe impl Send for &'static Foo {}\n// error: cross-crate traits with a default impl, like `core::marker::Send`,\n//        can only be implemented for a struct/enum type, not\n//        `&'static Foo`\n```\n\nOnly structs and enums are permitted to impl Send, Sync, and other opt-out\ntrait, and the struct or enum must be local to the current crate. So, for\nexample, `unsafe impl Send for Rc<Foo>` is not allowed.\n",
+    "description": "E0321"
+  },
+  "E0322": {
+    "message": "\nThe `Sized` trait is a special trait built-in to the compiler for types with a\nconstant size known at compile-time. This trait is automatically implemented\nfor types as needed by the compiler, and it is currently disallowed to\nexplicitly implement it for a type.\n",
+    "description": "E0322"
+  },
+  "E0323": {
+    "message": "\nAn associated const was implemented when another trait item was expected.\nErroneous code example:\n\n```compile_fail,E0323\ntrait Foo {\n    type N;\n}\n\nstruct Bar;\n\nimpl Foo for Bar {\n    const N : u32 = 0;\n    // error: item `N` is an associated const, which doesn't match its\n    //        trait `<Bar as Foo>`\n}\n```\n\nPlease verify that the associated const wasn't misspelled and the correct trait\nwas implemented. Example:\n\n```\nstruct Bar;\n\ntrait Foo {\n    type N;\n}\n\nimpl Foo for Bar {\n    type N = u32; // ok!\n}\n```\n\nOr:\n\n```\nstruct Bar;\n\ntrait Foo {\n    const N : u32;\n}\n\nimpl Foo for Bar {\n    const N : u32 = 0; // ok!\n}\n```\n",
+    "description": "E0323"
+  },
+  "E0324": {
+    "message": "\nA method was implemented when another trait item was expected. Erroneous\ncode example:\n\n```compile_fail,E0324\nstruct Bar;\n\ntrait Foo {\n    const N : u32;\n\n    fn M();\n}\n\nimpl Foo for Bar {\n    fn N() {}\n    // error: item `N` is an associated method, which doesn't match its\n    //        trait `<Bar as Foo>`\n}\n```\n\nTo fix this error, please verify that the method name wasn't misspelled and\nverify that you are indeed implementing the correct trait items. Example:\n\n```\nstruct Bar;\n\ntrait Foo {\n    const N : u32;\n\n    fn M();\n}\n\nimpl Foo for Bar {\n    const N : u32 = 0;\n\n    fn M() {} // ok!\n}\n```\n",
+    "description": "E0324"
+  },
+  "E0325": {
+    "message": "\nAn associated type was implemented when another trait item was expected.\nErroneous code example:\n\n```compile_fail,E0325\nstruct Bar;\n\ntrait Foo {\n    const N : u32;\n}\n\nimpl Foo for Bar {\n    type N = u32;\n    // error: item `N` is an associated type, which doesn't match its\n    //        trait `<Bar as Foo>`\n}\n```\n\nPlease verify that the associated type name wasn't misspelled and your\nimplementation corresponds to the trait definition. Example:\n\n```\nstruct Bar;\n\ntrait Foo {\n    type N;\n}\n\nimpl Foo for Bar {\n    type N = u32; // ok!\n}\n```\n\nOr:\n\n```\nstruct Bar;\n\ntrait Foo {\n    const N : u32;\n}\n\nimpl Foo for Bar {\n    const N : u32 = 0; // ok!\n}\n```\n",
+    "description": "E0325"
+  },
+  "E0326": {
+    "message": "\nThe types of any associated constants in a trait implementation must match the\ntypes in the trait definition. This error indicates that there was a mismatch.\n\nHere's an example of this error:\n\n```compile_fail,E0326\ntrait Foo {\n    const BAR: bool;\n}\n\nstruct Bar;\n\nimpl Foo for Bar {\n    const BAR: u32 = 5; // error, expected bool, found u32\n}\n```\n",
+    "description": "E0326"
+  },
+  "E0328": {
+    "message": "\nThe Unsize trait should not be implemented directly. All implementations of\nUnsize are provided automatically by the compiler.\n\nErroneous code example:\n\n```compile_fail,E0328\n#![feature(unsize)]\n\nuse std::marker::Unsize;\n\npub struct MyType;\n\nimpl<T> Unsize<T> for MyType {}\n```\n\nIf you are defining your own smart pointer type and would like to enable\nconversion from a sized to an unsized type with the\n[DST coercion system][RFC 982], use [`CoerceUnsized`] instead.\n\n```\n#![feature(coerce_unsized)]\n\nuse std::ops::CoerceUnsized;\n\npub struct MyType<T: ?Sized> {\n    field_with_unsized_type: T,\n}\n\nimpl<T, U> CoerceUnsized<MyType<U>> for MyType<T>\n    where T: CoerceUnsized<U> {}\n```\n\n[RFC 982]: https://github.com/rust-lang/rfcs/blob/master/text/0982-dst-coercion.md\n[`CoerceUnsized`]: https://doc.rust-lang.org/std/ops/trait.CoerceUnsized.html\n",
+    "description": "E0328"
+  },
+  "E0366": {
+    "message": "\nAn attempt was made to implement `Drop` on a concrete specialization of a\ngeneric type. An example is shown below:\n\n```compile_fail,E0366\nstruct Foo<T> {\n    t: T\n}\n\nimpl Drop for Foo<u32> {\n    fn drop(&mut self) {}\n}\n```\n\nThis code is not legal: it is not possible to specialize `Drop` to a subset of\nimplementations of a generic type. One workaround for this is to wrap the\ngeneric type, as shown below:\n\n```\nstruct Foo<T> {\n    t: T\n}\n\nstruct Bar {\n    t: Foo<u32>\n}\n\nimpl Drop for Bar {\n    fn drop(&mut self) {}\n}\n```\n",
+    "description": "E0366"
+  },
+  "E0367": {
+    "message": "\nAn attempt was made to implement `Drop` on a specialization of a generic type.\nAn example is shown below:\n\n```compile_fail,E0367\ntrait Foo{}\n\nstruct MyStruct<T> {\n    t: T\n}\n\nimpl<T: Foo> Drop for MyStruct<T> {\n    fn drop(&mut self) {}\n}\n```\n\nThis code is not legal: it is not possible to specialize `Drop` to a subset of\nimplementations of a generic type. In order for this code to work, `MyStruct`\nmust also require that `T` implements `Foo`. Alternatively, another option is\nto wrap the generic type in another that specializes appropriately:\n\n```\ntrait Foo{}\n\nstruct MyStruct<T> {\n    t: T\n}\n\nstruct MyStructWrapper<T: Foo> {\n    t: MyStruct<T>\n}\n\nimpl <T: Foo> Drop for MyStructWrapper<T> {\n    fn drop(&mut self) {}\n}\n```\n",
+    "description": "E0367"
+  },
+  "E0368": {
+    "message": "\nThis error indicates that a binary assignment operator like `+=` or `^=` was\napplied to a type that doesn't support it. For example:\n\n```compile_fail,E0368\nlet mut x = 12f32; // error: binary operation `<<` cannot be applied to\n                   //        type `f32`\n\nx <<= 2;\n```\n\nTo fix this error, please check that this type implements this binary\noperation. Example:\n\n```\nlet mut x = 12u32; // the `u32` type does implement the `ShlAssign` trait\n\nx <<= 2; // ok!\n```\n\nIt is also possible to overload most operators for your own type by\nimplementing the `[OP]Assign` traits from `std::ops`.\n\nAnother problem you might be facing is this: suppose you've overloaded the `+`\noperator for some type `Foo` by implementing the `std::ops::Add` trait for\n`Foo`, but you find that using `+=` does not work, as in this example:\n\n```compile_fail,E0368\nuse std::ops::Add;\n\nstruct Foo(u32);\n\nimpl Add for Foo {\n    type Output = Foo;\n\n    fn add(self, rhs: Foo) -> Foo {\n        Foo(self.0 + rhs.0)\n    }\n}\n\nfn main() {\n    let mut x: Foo = Foo(5);\n    x += Foo(7); // error, `+= cannot be applied to the type `Foo`\n}\n```\n\nThis is because `AddAssign` is not automatically implemented, so you need to\nmanually implement it for your type.\n",
+    "description": "E0368"
+  },
+  "E0369": {
+    "message": "\nA binary operation was attempted on a type which doesn't support it.\nErroneous code example:\n\n```compile_fail,E0369\nlet x = 12f32; // error: binary operation `<<` cannot be applied to\n               //        type `f32`\n\nx << 2;\n```\n\nTo fix this error, please check that this type implements this binary\noperation. Example:\n\n```\nlet x = 12u32; // the `u32` type does implement it:\n               // https://doc.rust-lang.org/stable/std/ops/trait.Shl.html\n\nx << 2; // ok!\n```\n\nIt is also possible to overload most operators for your own type by\nimplementing traits from `std::ops`.\n\nString concatenation appends the string on the right to the string on the\nleft and may require reallocation. This requires ownership of the string\non the left. If something should be added to a string literal, move the\nliteral to the heap by allocating it with `to_owned()` like in\n`\"Your text\".to_owned()`.\n\n",
+    "description": "E0369"
+  },
+  "E0370": {
+    "message": "\nThe maximum value of an enum was reached, so it cannot be automatically\nset in the next enum value. Erroneous code example:\n\n```compile_fail,E0370\n#[repr(i64)]\nenum Foo {\n    X = 0x7fffffffffffffff,\n    Y, // error: enum discriminant overflowed on value after\n       //        9223372036854775807: i64; set explicitly via\n       //        Y = -9223372036854775808 if that is desired outcome\n}\n```\n\nTo fix this, please set manually the next enum value or put the enum variant\nwith the maximum value at the end of the enum. Examples:\n\n```\n#[repr(i64)]\nenum Foo {\n    X = 0x7fffffffffffffff,\n    Y = 0, // ok!\n}\n```\n\nOr:\n\n```\n#[repr(i64)]\nenum Foo {\n    Y = 0, // ok!\n    X = 0x7fffffffffffffff,\n}\n```\n",
+    "description": "E0370"
+  },
+  "E0371": {
+    "message": "\nWhen `Trait2` is a subtrait of `Trait1` (for example, when `Trait2` has a\ndefinition like `trait Trait2: Trait1 { ... }`), it is not allowed to implement\n`Trait1` for `Trait2`. This is because `Trait2` already implements `Trait1` by\ndefinition, so it is not useful to do this.\n\nExample:\n\n```compile_fail,E0371\ntrait Foo { fn foo(&self) { } }\ntrait Bar: Foo { }\ntrait Baz: Bar { }\n\nimpl Bar for Baz { } // error, `Baz` implements `Bar` by definition\nimpl Foo for Baz { } // error, `Baz` implements `Bar` which implements `Foo`\nimpl Baz for Baz { } // error, `Baz` (trivially) implements `Baz`\nimpl Baz for Bar { } // Note: This is OK\n```\n",
+    "description": "E0371"
+  },
+  "E0374": {
+    "message": "\nA struct without a field containing an unsized type cannot implement\n`CoerceUnsized`. An [unsized type][1] is any type that the compiler\ndoesn't know the length or alignment of at compile time. Any struct\ncontaining an unsized type is also unsized.\n\n[1]: https://doc.rust-lang.org/book/ch19-04-advanced-types.html#dynamically-sized-types-and-the-sized-trait\n\nExample of erroneous code:\n\n```compile_fail,E0374\n#![feature(coerce_unsized)]\nuse std::ops::CoerceUnsized;\n\nstruct Foo<T: ?Sized> {\n    a: i32,\n}\n\n// error: Struct `Foo` has no unsized fields that need `CoerceUnsized`.\nimpl<T, U> CoerceUnsized<Foo<U>> for Foo<T>\n    where T: CoerceUnsized<U> {}\n```\n\n`CoerceUnsized` is used to coerce one struct containing an unsized type\ninto another struct containing a different unsized type. If the struct\ndoesn't have any fields of unsized types then you don't need explicit\ncoercion to get the types you want. To fix this you can either\nnot try to implement `CoerceUnsized` or you can add a field that is\nunsized to the struct.\n\nExample:\n\n```\n#![feature(coerce_unsized)]\nuse std::ops::CoerceUnsized;\n\n// We don't need to impl `CoerceUnsized` here.\nstruct Foo {\n    a: i32,\n}\n\n// We add the unsized type field to the struct.\nstruct Bar<T: ?Sized> {\n    a: i32,\n    b: T,\n}\n\n// The struct has an unsized field so we can implement\n// `CoerceUnsized` for it.\nimpl<T, U> CoerceUnsized<Bar<U>> for Bar<T>\n    where T: CoerceUnsized<U> {}\n```\n\nNote that `CoerceUnsized` is mainly used by smart pointers like `Box`, `Rc`\nand `Arc` to be able to mark that they can coerce unsized types that they\nare pointing at.\n",
+    "description": "E0374"
+  },
+  "E0375": {
+    "message": "\nA struct with more than one field containing an unsized type cannot implement\n`CoerceUnsized`. This only occurs when you are trying to coerce one of the\ntypes in your struct to another type in the struct. In this case we try to\nimpl `CoerceUnsized` from `T` to `U` which are both types that the struct\ntakes. An [unsized type][1] is any type that the compiler doesn't know the\nlength or alignment of at compile time. Any struct containing an unsized type\nis also unsized.\n\nExample of erroneous code:\n\n```compile_fail,E0375\n#![feature(coerce_unsized)]\nuse std::ops::CoerceUnsized;\n\nstruct Foo<T: ?Sized, U: ?Sized> {\n    a: i32,\n    b: T,\n    c: U,\n}\n\n// error: Struct `Foo` has more than one unsized field.\nimpl<T, U> CoerceUnsized<Foo<U, T>> for Foo<T, U> {}\n```\n\n`CoerceUnsized` only allows for coercion from a structure with a single\nunsized type field to another struct with a single unsized type field.\nIn fact Rust only allows for a struct to have one unsized type in a struct\nand that unsized type must be the last field in the struct. So having two\nunsized types in a single struct is not allowed by the compiler. To fix this\nuse only one field containing an unsized type in the struct and then use\nmultiple structs to manage each unsized type field you need.\n\nExample:\n\n```\n#![feature(coerce_unsized)]\nuse std::ops::CoerceUnsized;\n\nstruct Foo<T: ?Sized> {\n    a: i32,\n    b: T,\n}\n\nimpl <T, U> CoerceUnsized<Foo<U>> for Foo<T>\n    where T: CoerceUnsized<U> {}\n\nfn coerce_foo<T: CoerceUnsized<U>, U>(t: T) -> Foo<U> {\n    Foo { a: 12i32, b: t } // we use coercion to get the `Foo<U>` type we need\n}\n```\n\n[1]: https://doc.rust-lang.org/book/ch19-04-advanced-types.html#dynamically-sized-types-and-the-sized-trait\n",
+    "description": "E0375"
+  },
+  "E0376": {
+    "message": "\nThe type you are trying to impl `CoerceUnsized` for is not a struct.\n`CoerceUnsized` can only be implemented for a struct. Unsized types are\nalready able to be coerced without an implementation of `CoerceUnsized`\nwhereas a struct containing an unsized type needs to know the unsized type\nfield it's containing is able to be coerced. An [unsized type][1]\nis any type that the compiler doesn't know the length or alignment of at\ncompile time. Any struct containing an unsized type is also unsized.\n\n[1]: https://doc.rust-lang.org/book/ch19-04-advanced-types.html#dynamically-sized-types-and-the-sized-trait\n\nExample of erroneous code:\n\n```compile_fail,E0376\n#![feature(coerce_unsized)]\nuse std::ops::CoerceUnsized;\n\nstruct Foo<T: ?Sized> {\n    a: T,\n}\n\n// error: The type `U` is not a struct\nimpl<T, U> CoerceUnsized<U> for Foo<T> {}\n```\n\nThe `CoerceUnsized` trait takes a struct type. Make sure the type you are\nproviding to `CoerceUnsized` is a struct with only the last field containing an\nunsized type.\n\nExample:\n\n```\n#![feature(coerce_unsized)]\nuse std::ops::CoerceUnsized;\n\nstruct Foo<T> {\n    a: T,\n}\n\n// The `Foo<U>` is a struct so `CoerceUnsized` can be implemented\nimpl<T, U> CoerceUnsized<Foo<U>> for Foo<T> where T: CoerceUnsized<U> {}\n```\n\nNote that in Rust, structs can only contain an unsized type if the field\ncontaining the unsized type is the last and only unsized type field in the\nstruct.\n",
+    "description": "E0376"
+  },
+  "E0378": {
+    "message": "\nThe `DispatchFromDyn` trait currently can only be implemented for\nbuiltin pointer types and structs that are newtype wrappers around them\n— that is, the struct must have only one field (except for`PhantomData`),\nand that field must itself implement `DispatchFromDyn`.\n\nExamples:\n\n```\n#![feature(dispatch_from_dyn, unsize)]\nuse std::{\n    marker::Unsize,\n    ops::DispatchFromDyn,\n};\n\nstruct Ptr<T: ?Sized>(*const T);\n\nimpl<T: ?Sized, U: ?Sized> DispatchFromDyn<Ptr<U>> for Ptr<T>\nwhere\n    T: Unsize<U>,\n{}\n```\n\n```\n#![feature(dispatch_from_dyn)]\nuse std::{\n    ops::DispatchFromDyn,\n    marker::PhantomData,\n};\n\nstruct Wrapper<T> {\n    ptr: T,\n    _phantom: PhantomData<()>,\n}\n\nimpl<T, U> DispatchFromDyn<Wrapper<U>> for Wrapper<T>\nwhere\n    T: DispatchFromDyn<U>,\n{}\n```\n\nExample of illegal `DispatchFromDyn` implementation\n(illegal because of extra field)\n\n```compile-fail,E0378\n#![feature(dispatch_from_dyn)]\nuse std::ops::DispatchFromDyn;\n\nstruct WrapperExtraField<T> {\n    ptr: T,\n    extra_stuff: i32,\n}\n\nimpl<T, U> DispatchFromDyn<WrapperExtraField<U>> for WrapperExtraField<T>\nwhere\n    T: DispatchFromDyn<U>,\n{}\n```\n",
+    "description": "E0378"
+  },
+  "E0390": {
+    "message": "\nYou tried to implement methods for a primitive type. Erroneous code example:\n\n```compile_fail,E0390\nstruct Foo {\n    x: i32\n}\n\nimpl *mut Foo {}\n// error: only a single inherent implementation marked with\n//        `#[lang = \"mut_ptr\"]` is allowed for the `*mut T` primitive\n```\n\nThis isn't allowed, but using a trait to implement a method is a good solution.\nExample:\n\n```\nstruct Foo {\n    x: i32\n}\n\ntrait Bar {\n    fn bar();\n}\n\nimpl Bar for *mut Foo {\n    fn bar() {} // ok!\n}\n```\n",
+    "description": "E0390"
+  },
+  "E0392": {
+    "message": "\nThis error indicates that a type or lifetime parameter has been declared\nbut not actually used. Here is an example that demonstrates the error:\n\n```compile_fail,E0392\nenum Foo<T> {\n    Bar,\n}\n```\n\nIf the type parameter was included by mistake, this error can be fixed\nby simply removing the type parameter, as shown below:\n\n```\nenum Foo {\n    Bar,\n}\n```\n\nAlternatively, if the type parameter was intentionally inserted, it must be\nused. A simple fix is shown below:\n\n```\nenum Foo<T> {\n    Bar(T),\n}\n```\n\nThis error may also commonly be found when working with unsafe code. For\nexample, when using raw pointers one may wish to specify the lifetime for\nwhich the pointed-at data is valid. An initial attempt (below) causes this\nerror:\n\n```compile_fail,E0392\nstruct Foo<'a, T> {\n    x: *const T,\n}\n```\n\nWe want to express the constraint that Foo should not outlive `'a`, because\nthe data pointed to by `T` is only valid for that lifetime. The problem is\nthat there are no actual uses of `'a`. It's possible to work around this\nby adding a PhantomData type to the struct, using it to tell the compiler\nto act as if the struct contained a borrowed reference `&'a T`:\n\n```\nuse std::marker::PhantomData;\n\nstruct Foo<'a, T: 'a> {\n    x: *const T,\n    phantom: PhantomData<&'a T>\n}\n```\n\n[PhantomData] can also be used to express information about unused type\nparameters.\n\n[PhantomData]: https://doc.rust-lang.org/std/marker/struct.PhantomData.html\n",
+    "description": "E0392"
+  },
+  "E0393": {
+    "message": "\nA type parameter which references `Self` in its default value was not specified.\nExample of erroneous code:\n\n```compile_fail,E0393\ntrait A<T=Self> {}\n\nfn together_we_will_rule_the_galaxy(son: &A) {}\n// error: the type parameter `T` must be explicitly specified in an\n//        object type because its default value `Self` references the\n//        type `Self`\n```\n\nA trait object is defined over a single, fully-defined trait. With a regular\ndefault parameter, this parameter can just be substituted in. However, if the\ndefault parameter is `Self`, the trait changes for each concrete type; i.e.\n`i32` will be expected to implement `A<i32>`, `bool` will be expected to\nimplement `A<bool>`, etc... These types will not share an implementation of a\nfully-defined trait; instead they share implementations of a trait with\ndifferent parameters substituted in for each implementation. This is\nirreconcilable with what we need to make a trait object work, and is thus\ndisallowed. Making the trait concrete by explicitly specifying the value of the\ndefaulted parameter will fix this issue. Fixed example:\n\n```\ntrait A<T=Self> {}\n\nfn together_we_will_rule_the_galaxy(son: &A<i32>) {} // Ok!\n```\n",
+    "description": "E0393"
+  },
+  "E0399": {
+    "message": "\nYou implemented a trait, overriding one or more of its associated types but did\nnot reimplement its default methods.\n\nExample of erroneous code:\n\n```compile_fail,E0399\n#![feature(associated_type_defaults)]\n\npub trait Foo {\n    type Assoc = u8;\n    fn bar(&self) {}\n}\n\nimpl Foo for i32 {\n    // error - the following trait items need to be reimplemented as\n    //         `Assoc` was overridden: `bar`\n    type Assoc = i32;\n}\n```\n\nTo fix this, add an implementation for each default method from the trait:\n\n```\n#![feature(associated_type_defaults)]\n\npub trait Foo {\n    type Assoc = u8;\n    fn bar(&self) {}\n}\n\nimpl Foo for i32 {\n    type Assoc = i32;\n    fn bar(&self) {} // ok!\n}\n```\n",
+    "description": "E0399"
+  },
+  "E0436": {
+    "message": "\nThe functional record update syntax is only allowed for structs. (Struct-like\nenum variants don't qualify, for example.)\n\nErroneous code example:\n\n```compile_fail,E0436\nenum PublicationFrequency {\n    Weekly,\n    SemiMonthly { days: (u8, u8), annual_special: bool },\n}\n\nfn one_up_competitor(competitor_frequency: PublicationFrequency)\n                     -> PublicationFrequency {\n    match competitor_frequency {\n        PublicationFrequency::Weekly => PublicationFrequency::SemiMonthly {\n            days: (1, 15), annual_special: false\n        },\n        c @ PublicationFrequency::SemiMonthly{ .. } =>\n            PublicationFrequency::SemiMonthly {\n                annual_special: true, ..c // error: functional record update\n                                          //        syntax requires a struct\n        }\n    }\n}\n```\n\nRewrite the expression without functional record update syntax:\n\n```\nenum PublicationFrequency {\n    Weekly,\n    SemiMonthly { days: (u8, u8), annual_special: bool },\n}\n\nfn one_up_competitor(competitor_frequency: PublicationFrequency)\n                     -> PublicationFrequency {\n    match competitor_frequency {\n        PublicationFrequency::Weekly => PublicationFrequency::SemiMonthly {\n            days: (1, 15), annual_special: false\n        },\n        PublicationFrequency::SemiMonthly{ days, .. } =>\n            PublicationFrequency::SemiMonthly {\n                days, annual_special: true // ok!\n        }\n    }\n}\n```\n",
+    "description": "E0436"
+  },
+  "E0439": {
+    "message": "\nThe length of the platform-intrinsic function `simd_shuffle`\nwasn't specified. Erroneous code example:\n\n```compile_fail,E0439\n#![feature(platform_intrinsics)]\n\nextern \"platform-intrinsic\" {\n    fn simd_shuffle<A,B>(a: A, b: A, c: [u32; 8]) -> B;\n    // error: invalid `simd_shuffle`, needs length: `simd_shuffle`\n}\n```\n\nThe `simd_shuffle` function needs the length of the array passed as\nlast parameter in its name. Example:\n\n```\n#![feature(platform_intrinsics)]\n\nextern \"platform-intrinsic\" {\n    fn simd_shuffle8<A,B>(a: A, b: A, c: [u32; 8]) -> B;\n}\n```\n",
+    "description": "E0439"
+  },
+  "E0516": {
+    "message": "\nThe `typeof` keyword is currently reserved but unimplemented.\nErroneous code example:\n\n```compile_fail,E0516\nfn main() {\n    let x: typeof(92) = 92;\n}\n```\n\nTry using type inference instead. Example:\n\n```\nfn main() {\n    let x = 92;\n}\n```\n",
+    "description": "E0516"
+  },
+  "E0520": {
+    "message": "\nA non-default implementation was already made on this type so it cannot be\nspecialized further. Erroneous code example:\n\n```compile_fail,E0520\n#![feature(specialization)]\n\ntrait SpaceLlama {\n    fn fly(&self);\n}\n\n// applies to all T\nimpl<T> SpaceLlama for T {\n    default fn fly(&self) {}\n}\n\n// non-default impl\n// applies to all `Clone` T and overrides the previous impl\nimpl<T: Clone> SpaceLlama for T {\n    fn fly(&self) {}\n}\n\n// since `i32` is clone, this conflicts with the previous implementation\nimpl SpaceLlama for i32 {\n    default fn fly(&self) {}\n    // error: item `fly` is provided by an `impl` that specializes\n    //        another, but the item in the parent `impl` is not marked\n    //        `default` and so it cannot be specialized.\n}\n```\n\nSpecialization only allows you to override `default` functions in\nimplementations.\n\nTo fix this error, you need to mark all the parent implementations as default.\nExample:\n\n```\n#![feature(specialization)]\n\ntrait SpaceLlama {\n    fn fly(&self);\n}\n\n// applies to all T\nimpl<T> SpaceLlama for T {\n    default fn fly(&self) {} // This is a parent implementation.\n}\n\n// applies to all `Clone` T; overrides the previous impl\nimpl<T: Clone> SpaceLlama for T {\n    default fn fly(&self) {} // This is a parent implementation but was\n                             // previously not a default one, causing the error\n}\n\n// applies to i32, overrides the previous two impls\nimpl SpaceLlama for i32 {\n    fn fly(&self) {} // And now that's ok!\n}\n```\n",
+    "description": "E0520"
+  },
+  "E0527": {
+    "message": "\nThe number of elements in an array or slice pattern differed from the number of\nelements in the array being matched.\n\nExample of erroneous code:\n\n```compile_fail,E0527\nlet r = &[1, 2, 3, 4];\nmatch r {\n    &[a, b] => { // error: pattern requires 2 elements but array\n                 //        has 4\n        println!(\"a={}, b={}\", a, b);\n    }\n}\n```\n\nEnsure that the pattern is consistent with the size of the matched\narray. Additional elements can be matched with `..`:\n\n```\n#![feature(slice_patterns)]\n\nlet r = &[1, 2, 3, 4];\nmatch r {\n    &[a, b, ..] => { // ok!\n        println!(\"a={}, b={}\", a, b);\n    }\n}\n```\n",
+    "description": "E0527"
+  },
+  "E0528": {
+    "message": "\nAn array or slice pattern required more elements than were present in the\nmatched array.\n\nExample of erroneous code:\n\n```compile_fail,E0528\n#![feature(slice_patterns)]\n\nlet r = &[1, 2];\nmatch r {\n    &[a, b, c, rest..] => { // error: pattern requires at least 3\n                            //        elements but array has 2\n        println!(\"a={}, b={}, c={} rest={:?}\", a, b, c, rest);\n    }\n}\n```\n\nEnsure that the matched array has at least as many elements as the pattern\nrequires. You can match an arbitrary number of remaining elements with `..`:\n\n```\n#![feature(slice_patterns)]\n\nlet r = &[1, 2, 3, 4, 5];\nmatch r {\n    &[a, b, c, rest..] => { // ok!\n        // prints `a=1, b=2, c=3 rest=[4, 5]`\n        println!(\"a={}, b={}, c={} rest={:?}\", a, b, c, rest);\n    }\n}\n```\n",
+    "description": "E0528"
+  },
+  "E0529": {
+    "message": "\nAn array or slice pattern was matched against some other type.\n\nExample of erroneous code:\n\n```compile_fail,E0529\nlet r: f32 = 1.0;\nmatch r {\n    [a, b] => { // error: expected an array or slice, found `f32`\n        println!(\"a={}, b={}\", a, b);\n    }\n}\n```\n\nEnsure that the pattern and the expression being matched on are of consistent\ntypes:\n\n```\nlet r = [1.0, 2.0];\nmatch r {\n    [a, b] => { // ok!\n        println!(\"a={}, b={}\", a, b);\n    }\n}\n```\n",
+    "description": "E0529"
+  },
+  "E0534": {
+    "message": "\nThe `inline` attribute was malformed.\n\nErroneous code example:\n\n```ignore (compile_fail not working here; see Issue #43707)\n#[inline()] // error: expected one argument\npub fn something() {}\n\nfn main() {}\n```\n\nThe parenthesized `inline` attribute requires the parameter to be specified:\n\n```\n#[inline(always)]\nfn something() {}\n```\n\nor:\n\n```\n#[inline(never)]\nfn something() {}\n```\n\nAlternatively, a paren-less version of the attribute may be used to hint the\ncompiler about inlining opportunity:\n\n```\n#[inline]\nfn something() {}\n```\n\nFor more information about the inline attribute, read:\nhttps://doc.rust-lang.org/reference.html#inline-attributes\n",
+    "description": "E0534"
+  },
+  "E0535": {
+    "message": "\nAn unknown argument was given to the `inline` attribute.\n\nErroneous code example:\n\n```ignore (compile_fail not working here; see Issue #43707)\n#[inline(unknown)] // error: invalid argument\npub fn something() {}\n\nfn main() {}\n```\n\nThe `inline` attribute only supports two arguments:\n\n * always\n * never\n\nAll other arguments given to the `inline` attribute will return this error.\nExample:\n\n```\n#[inline(never)] // ok!\npub fn something() {}\n\nfn main() {}\n```\n\nFor more information about the inline attribute, https:\nread://doc.rust-lang.org/reference.html#inline-attributes\n",
+    "description": "E0535"
+  },
+  "E0559": {
+    "message": "\nAn unknown field was specified into an enum's structure variant.\n\nErroneous code example:\n\n```compile_fail,E0559\nenum Field {\n    Fool { x: u32 },\n}\n\nlet s = Field::Fool { joke: 0 };\n// error: struct variant `Field::Fool` has no field named `joke`\n```\n\nVerify you didn't misspell the field's name or that the field exists. Example:\n\n```\nenum Field {\n    Fool { joke: u32 },\n}\n\nlet s = Field::Fool { joke: 0 }; // ok!\n```\n",
+    "description": "E0559"
+  },
+  "E0560": {
+    "message": "\nAn unknown field was specified into a structure.\n\nErroneous code example:\n\n```compile_fail,E0560\nstruct Simba {\n    mother: u32,\n}\n\nlet s = Simba { mother: 1, father: 0 };\n// error: structure `Simba` has no field named `father`\n```\n\nVerify you didn't misspell the field's name or that the field exists. Example:\n\n```\nstruct Simba {\n    mother: u32,\n    father: u32,\n}\n\nlet s = Simba { mother: 1, father: 0 }; // ok!\n```\n",
+    "description": "E0560"
+  },
+  "E0569": {
+    "message": "\nIf an impl has a generic parameter with the `#[may_dangle]` attribute, then\nthat impl must be declared as an `unsafe impl.\n\nErroneous code example:\n\n```compile_fail,E0569\n#![feature(dropck_eyepatch)]\n\nstruct Foo<X>(X);\nimpl<#[may_dangle] X> Drop for Foo<X> {\n    fn drop(&mut self) { }\n}\n```\n\nIn this example, we are asserting that the destructor for `Foo` will not\naccess any data of type `X`, and require this assertion to be true for\noverall safety in our program. The compiler does not currently attempt to\nverify this assertion; therefore we must tag this `impl` as unsafe.\n",
+    "description": "E0569"
+  },
+  "E0570": {
+    "message": "\nThe requested ABI is unsupported by the current target.\n\nThe rust compiler maintains for each target a blacklist of ABIs unsupported on\nthat target. If an ABI is present in such a list this usually means that the\ntarget / ABI combination is currently unsupported by llvm.\n\nIf necessary, you can circumvent this check using custom target specifications.\n",
+    "description": "E0570"
+  },
+  "E0572": {
+    "message": "\nA return statement was found outside of a function body.\n\nErroneous code example:\n\n```compile_fail,E0572\nconst FOO: u32 = return 0; // error: return statement outside of function body\n\nfn main() {}\n```\n\nTo fix this issue, just remove the return keyword or move the expression into a\nfunction. Example:\n\n```\nconst FOO: u32 = 0;\n\nfn some_fn() -> u32 {\n    return FOO;\n}\n\nfn main() {\n    some_fn();\n}\n```\n",
+    "description": "E0572"
+  },
+  "E0581": {
+    "message": "\nIn a `fn` type, a lifetime appears only in the return type,\nand not in the arguments types.\n\nErroneous code example:\n\n```compile_fail,E0581\nfn main() {\n    // Here, `'a` appears only in the return type:\n    let x: for<'a> fn() -> &'a i32;\n}\n```\n\nTo fix this issue, either use the lifetime in the arguments, or use\n`'static`. Example:\n\n```\nfn main() {\n    // Here, `'a` appears only in the return type:\n    let x: for<'a> fn(&'a i32) -> &'a i32;\n    let y: fn() -> &'static i32;\n}\n```\n\nNote: The examples above used to be (erroneously) accepted by the\ncompiler, but this was since corrected. See [issue #33685] for more\ndetails.\n\n[issue #33685]: https://github.com/rust-lang/rust/issues/33685\n",
+    "description": "E0581"
+  },
+  "E0582": {
+    "message": "\nA lifetime appears only in an associated-type binding,\nand not in the input types to the trait.\n\nErroneous code example:\n\n```compile_fail,E0582\nfn bar<F>(t: F)\n    // No type can satisfy this requirement, since `'a` does not\n    // appear in any of the input types (here, `i32`):\n    where F: for<'a> Fn(i32) -> Option<&'a i32>\n{\n}\n\nfn main() { }\n```\n\nTo fix this issue, either use the lifetime in the inputs, or use\n`'static`. Example:\n\n```\nfn bar<F, G>(t: F, u: G)\n    where F: for<'a> Fn(&'a i32) -> Option<&'a i32>,\n          G: Fn(i32) -> Option<&'static i32>,\n{\n}\n\nfn main() { }\n```\n\nNote: The examples above used to be (erroneously) accepted by the\ncompiler, but this was since corrected. See [issue #33685] for more\ndetails.\n\n[issue #33685]: https://github.com/rust-lang/rust/issues/33685\n",
+    "description": "E0582"
+  },
+  "E0599": {
+    "message": "\nThis error occurs when a method is used on a type which doesn't implement it:\n\nErroneous code example:\n\n```compile_fail,E0599\nstruct Mouth;\n\nlet x = Mouth;\nx.chocolate(); // error: no method named `chocolate` found for type `Mouth`\n               //        in the current scope\n```\n",
+    "description": "E0599"
+  },
+  "E0600": {
+    "message": "\nAn unary operator was used on a type which doesn't implement it.\n\nExample of erroneous code:\n\n```compile_fail,E0600\nenum Question {\n    Yes,\n    No,\n}\n\n!Question::Yes; // error: cannot apply unary operator `!` to type `Question`\n```\n\nIn this case, `Question` would need to implement the `std::ops::Not` trait in\norder to be able to use `!` on it. Let's implement it:\n\n```\nuse std::ops::Not;\n\nenum Question {\n    Yes,\n    No,\n}\n\n// We implement the `Not` trait on the enum.\nimpl Not for Question {\n    type Output = bool;\n\n    fn not(self) -> bool {\n        match self {\n            Question::Yes => false, // If the `Answer` is `Yes`, then it\n                                    // returns false.\n            Question::No => true, // And here we do the opposite.\n        }\n    }\n}\n\nassert_eq!(!Question::Yes, false);\nassert_eq!(!Question::No, true);\n```\n",
+    "description": "E0600"
+  },
+  "E0604": {
+    "message": "\nA cast to `char` was attempted on a type other than `u8`.\n\nErroneous code example:\n\n```compile_fail,E0604\n0u32 as char; // error: only `u8` can be cast as `char`, not `u32`\n```\n\nAs the error message indicates, only `u8` can be cast into `char`. Example:\n\n```\nlet c = 86u8 as char; // ok!\nassert_eq!(c, 'V');\n```\n\nFor more information about casts, take a look at the Type cast section in\n[The Reference Book][1].\n\n[1]: https://doc.rust-lang.org/reference/expressions/operator-expr.html#type-cast-expressions\n",
+    "description": "E0604"
+  },
+  "E0605": {
+    "message": "\nAn invalid cast was attempted.\n\nErroneous code examples:\n\n```compile_fail,E0605\nlet x = 0u8;\nx as Vec<u8>; // error: non-primitive cast: `u8` as `std::vec::Vec<u8>`\n\n// Another example\n\nlet v = 0 as *const u8; // So here, `v` is a `*const u8`.\nv as &u8; // error: non-primitive cast: `*const u8` as `&u8`\n```\n\nOnly primitive types can be cast into each other. Examples:\n\n```\nlet x = 0u8;\nx as u32; // ok!\n\nlet v = 0 as *const u8;\nv as *const i8; // ok!\n```\n\nFor more information about casts, take a look at the Type cast section in\n[The Reference Book][1].\n\n[1]: https://doc.rust-lang.org/reference/expressions/operator-expr.html#type-cast-expressions\n",
+    "description": "E0605"
+  },
+  "E0606": {
+    "message": "\nAn incompatible cast was attempted.\n\nErroneous code example:\n\n```compile_fail,E0606\nlet x = &0u8; // Here, `x` is a `&u8`.\nlet y: u32 = x as u32; // error: casting `&u8` as `u32` is invalid\n```\n\nWhen casting, keep in mind that only primitive types can be cast into each\nother. Example:\n\n```\nlet x = &0u8;\nlet y: u32 = *x as u32; // We dereference it first and then cast it.\n```\n\nFor more information about casts, take a look at the Type cast section in\n[The Reference Book][1].\n\n[1]: https://doc.rust-lang.org/reference/expressions/operator-expr.html#type-cast-expressions\n",
+    "description": "E0606"
+  },
+  "E0607": {
+    "message": "\nA cast between a thin and a fat pointer was attempted.\n\nErroneous code example:\n\n```compile_fail,E0607\nlet v = 0 as *const u8;\nv as *const [u8];\n```\n\nFirst: what are thin and fat pointers?\n\nThin pointers are \"simple\" pointers: they are purely a reference to a memory\naddress.\n\nFat pointers are pointers referencing Dynamically Sized Types (also called DST).\nDST don't have a statically known size, therefore they can only exist behind\nsome kind of pointers that contain additional information. Slices and trait\nobjects are DSTs. In the case of slices, the additional information the fat\npointer holds is their size.\n\nTo fix this error, don't try to cast directly between thin and fat pointers.\n\nFor more information about casts, take a look at the Type cast section in\n[The Reference Book][1].\n\n[1]: https://doc.rust-lang.org/reference/expressions/operator-expr.html#type-cast-expressions\n",
+    "description": "E0607"
+  },
+  "E0608": {
+    "message": "\nAn attempt to index into a type which doesn't implement the `std::ops::Index`\ntrait was performed.\n\nErroneous code example:\n\n```compile_fail,E0608\n0u8[2]; // error: cannot index into a value of type `u8`\n```\n\nTo be able to index into a type it needs to implement the `std::ops::Index`\ntrait. Example:\n\n```\nlet v: Vec<u8> = vec![0, 1, 2, 3];\n\n// The `Vec` type implements the `Index` trait so you can do:\nprintln!(\"{}\", v[2]);\n```\n",
+    "description": "E0608"
+  },
+  "E0609": {
+    "message": "\nAttempted to access a non-existent field in a struct.\n\nErroneous code example:\n\n```compile_fail,E0609\nstruct StructWithFields {\n    x: u32,\n}\n\nlet s = StructWithFields { x: 0 };\nprintln!(\"{}\", s.foo); // error: no field `foo` on type `StructWithFields`\n```\n\nTo fix this error, check that you didn't misspell the field's name or that the\nfield actually exists. Example:\n\n```\nstruct StructWithFields {\n    x: u32,\n}\n\nlet s = StructWithFields { x: 0 };\nprintln!(\"{}\", s.x); // ok!\n```\n",
+    "description": "E0609"
+  },
+  "E0610": {
+    "message": "\nAttempted to access a field on a primitive type.\n\nErroneous code example:\n\n```compile_fail,E0610\nlet x: u32 = 0;\nprintln!(\"{}\", x.foo); // error: `{integer}` is a primitive type, therefore\n                       //        doesn't have fields\n```\n\nPrimitive types are the most basic types available in Rust and don't have\nfields. To access data via named fields, struct types are used. Example:\n\n```\n// We declare struct called `Foo` containing two fields:\nstruct Foo {\n    x: u32,\n    y: i64,\n}\n\n// We create an instance of this struct:\nlet variable = Foo { x: 0, y: -12 };\n// And we can now access its fields:\nprintln!(\"x: {}, y: {}\", variable.x, variable.y);\n```\n\nFor more information about primitives and structs, take a look at The Book:\nhttps://doc.rust-lang.org/book/ch03-02-data-types.html\nhttps://doc.rust-lang.org/book/ch05-00-structs.html\n",
+    "description": "E0610"
+  },
+  "E0614": {
+    "message": "\nAttempted to dereference a variable which cannot be dereferenced.\n\nErroneous code example:\n\n```compile_fail,E0614\nlet y = 0u32;\n*y; // error: type `u32` cannot be dereferenced\n```\n\nOnly types implementing `std::ops::Deref` can be dereferenced (such as `&T`).\nExample:\n\n```\nlet y = 0u32;\nlet x = &y;\n// So here, `x` is a `&u32`, so we can dereference it:\n*x; // ok!\n```\n",
+    "description": "E0614"
+  },
+  "E0615": {
+    "message": "\nAttempted to access a method like a field.\n\nErroneous code example:\n\n```compile_fail,E0615\nstruct Foo {\n    x: u32,\n}\n\nimpl Foo {\n    fn method(&self) {}\n}\n\nlet f = Foo { x: 0 };\nf.method; // error: attempted to take value of method `method` on type `Foo`\n```\n\nIf you want to use a method, add `()` after it:\n\n```\n# struct Foo { x: u32 }\n# impl Foo { fn method(&self) {} }\n# let f = Foo { x: 0 };\nf.method();\n```\n\nHowever, if you wanted to access a field of a struct check that the field name\nis spelled correctly. Example:\n\n```\n# struct Foo { x: u32 }\n# impl Foo { fn method(&self) {} }\n# let f = Foo { x: 0 };\nprintln!(\"{}\", f.x);\n```\n",
+    "description": "E0615"
+  },
+  "E0616": {
+    "message": "\nAttempted to access a private field on a struct.\n\nErroneous code example:\n\n```compile_fail,E0616\nmod some_module {\n    pub struct Foo {\n        x: u32, // So `x` is private in here.\n    }\n\n    impl Foo {\n        pub fn new() -> Foo { Foo { x: 0 } }\n    }\n}\n\nlet f = some_module::Foo::new();\nprintln!(\"{}\", f.x); // error: field `x` of struct `some_module::Foo` is private\n```\n\nIf you want to access this field, you have two options:\n\n1) Set the field public:\n\n```\nmod some_module {\n    pub struct Foo {\n        pub x: u32, // `x` is now public.\n    }\n\n    impl Foo {\n        pub fn new() -> Foo { Foo { x: 0 } }\n    }\n}\n\nlet f = some_module::Foo::new();\nprintln!(\"{}\", f.x); // ok!\n```\n\n2) Add a getter function:\n\n```\nmod some_module {\n    pub struct Foo {\n        x: u32, // So `x` is still private in here.\n    }\n\n    impl Foo {\n        pub fn new() -> Foo { Foo { x: 0 } }\n\n        // We create the getter function here:\n        pub fn get_x(&self) -> &u32 { &self.x }\n    }\n}\n\nlet f = some_module::Foo::new();\nprintln!(\"{}\", f.get_x()); // ok!\n```\n",
+    "description": "E0616"
+  },
+  "E0617": {
+    "message": "\nAttempted to pass an invalid type of variable into a variadic function.\n\nErroneous code example:\n\n```compile_fail,E0617\nextern {\n    fn printf(c: *const i8, ...);\n}\n\nunsafe {\n    printf(::std::ptr::null(), 0f32);\n    // error: can't pass an `f32` to variadic function, cast to `c_double`\n}\n```\n\nCertain Rust types must be cast before passing them to a variadic function,\nbecause of arcane ABI rules dictated by the C standard. To fix the error,\ncast the value to the type specified by the error message (which you may need\nto import from `std::os::raw`).\n",
+    "description": "E0617"
+  },
+  "E0618": {
+    "message": "\nAttempted to call something which isn't a function nor a method.\n\nErroneous code examples:\n\n```compile_fail,E0618\nenum X {\n    Entry,\n}\n\nX::Entry(); // error: expected function, found `X::Entry`\n\n// Or even simpler:\nlet x = 0i32;\nx(); // error: expected function, found `i32`\n```\n\nOnly functions and methods can be called using `()`. Example:\n\n```\n// We declare a function:\nfn i_am_a_function() {}\n\n// And we call it:\ni_am_a_function();\n```\n",
+    "description": "E0618"
+  },
+  "E0619": {
+    "message": "\n#### Note: this error code is no longer emitted by the compiler.\nThe type-checker needed to know the type of an expression, but that type had not\nyet been inferred.\n\nErroneous code example:\n\n```compile_fail\nlet mut x = vec![];\nmatch x.pop() {\n    Some(v) => {\n        // Here, the type of `v` is not (yet) known, so we\n        // cannot resolve this method call:\n        v.to_uppercase(); // error: the type of this value must be known in\n                          //        this context\n    }\n    None => {}\n}\n```\n\nType inference typically proceeds from the top of the function to the bottom,\nfiguring out types as it goes. In some cases -- notably method calls and\noverloadable operators like `*` -- the type checker may not have enough\ninformation *yet* to make progress. This can be true even if the rest of the\nfunction provides enough context (because the type-checker hasn't looked that\nfar ahead yet). In this case, type annotations can be used to help it along.\n\nTo fix this error, just specify the type of the variable. Example:\n\n```\nlet mut x: Vec<String> = vec![]; // We precise the type of the vec elements.\nmatch x.pop() {\n    Some(v) => {\n        v.to_uppercase(); // Since rustc now knows the type of the vec elements,\n                          // we can use `v`'s methods.\n    }\n    None => {}\n}\n```\n",
+    "description": "E0619"
+  },
+  "E0620": {
+    "message": "\nA cast to an unsized type was attempted.\n\nErroneous code example:\n\n```compile_fail,E0620\nlet x = &[1_usize, 2] as [usize]; // error: cast to unsized type: `&[usize; 2]`\n                                  //        as `[usize]`\n```\n\nIn Rust, some types don't have a known size at compile-time. For example, in a\nslice type like `[u32]`, the number of elements is not known at compile-time and\nhence the overall size cannot be computed. As a result, such types can only be\nmanipulated through a reference (e.g., `&T` or `&mut T`) or other pointer-type\n(e.g., `Box` or `Rc`). Try casting to a reference instead:\n\n```\nlet x = &[1_usize, 2] as &[usize]; // ok!\n```\n",
+    "description": "E0620"
+  },
+  "E0622": {
+    "message": "\nAn intrinsic was declared without being a function.\n\nErroneous code example:\n\n```compile_fail,E0622\n#![feature(intrinsics)]\nextern \"rust-intrinsic\" {\n    pub static breakpoint : unsafe extern \"rust-intrinsic\" fn();\n    // error: intrinsic must be a function\n}\n\nfn main() { unsafe { breakpoint(); } }\n```\n\nAn intrinsic is a function available for use in a given programming language\nwhose implementation is handled specially by the compiler. In order to fix this\nerror, just declare a function.\n",
+    "description": "E0622"
+  },
+  "E0624": {
+    "message": "\nA private item was used outside of its scope.\n\nErroneous code example:\n\n```compile_fail,E0624\nmod inner {\n    pub struct Foo;\n\n    impl Foo {\n        fn method(&self) {}\n    }\n}\n\nlet foo = inner::Foo;\nfoo.method(); // error: method `method` is private\n```\n\nTwo possibilities are available to solve this issue:\n\n1. Only use the item in the scope it has been defined:\n\n```\nmod inner {\n    pub struct Foo;\n\n    impl Foo {\n        fn method(&self) {}\n    }\n\n    pub fn call_method(foo: &Foo) { // We create a public function.\n        foo.method(); // Which calls the item.\n    }\n}\n\nlet foo = inner::Foo;\ninner::call_method(&foo); // And since the function is public, we can call the\n                          // method through it.\n```\n\n2. Make the item public:\n\n```\nmod inner {\n    pub struct Foo;\n\n    impl Foo {\n        pub fn method(&self) {} // It's now public.\n    }\n}\n\nlet foo = inner::Foo;\nfoo.method(); // Ok!\n```\n",
+    "description": "E0624"
+  },
+  "E0638": {
+    "message": "\nThis error indicates that the struct, enum or enum variant must be matched\nnon-exhaustively as it has been marked as `non_exhaustive`.\n\nWhen applied within a crate, downstream users of the crate will need to use the\n`_` pattern when matching enums and use the `..` pattern when matching structs.\nDownstream crates cannot match against non-exhaustive enum variants.\n\nFor example, in the below example, since the enum is marked as\n`non_exhaustive`, it is required that downstream crates match non-exhaustively\non it.\n\n```rust,ignore (pseudo-Rust)\nuse std::error::Error as StdError;\n\n#[non_exhaustive] pub enum Error {\n   Message(String),\n   Other,\n}\n\nimpl StdError for Error {\n   fn description(&self) -> &str {\n        // This will not error, despite being marked as non_exhaustive, as this\n        // enum is defined within the current crate, it can be matched\n        // exhaustively.\n        match *self {\n           Message(ref s) => s,\n           Other => \"other or unknown error\",\n        }\n   }\n}\n```\n\nAn example of matching non-exhaustively on the above enum is provided below:\n\n```rust,ignore (pseudo-Rust)\nuse mycrate::Error;\n\n// This will not error as the non_exhaustive Error enum has been matched with a\n// wildcard.\nmatch error {\n   Message(ref s) => ...,\n   Other => ...,\n   _ => ...,\n}\n```\n\nSimilarly, for structs, match with `..` to avoid this error.\n",
+    "description": "E0638"
+  },
+  "E0639": {
+    "message": "\nThis error indicates that the struct, enum or enum variant cannot be\ninstantiated from outside of the defining crate as it has been marked\nas `non_exhaustive` and as such more fields/variants may be added in\nfuture that could cause adverse side effects for this code.\n\nIt is recommended that you look for a `new` function or equivalent in the\ncrate's documentation.\n",
+    "description": "E0639"
+  },
+  "E0643": {
+    "message": "\nThis error indicates that there is a mismatch between generic parameters and\nimpl Trait parameters in a trait declaration versus its impl.\n\n```compile_fail,E0643\ntrait Foo {\n    fn foo(&self, _: &impl Iterator);\n}\nimpl Foo for () {\n    fn foo<U: Iterator>(&self, _: &U) { } // error method `foo` has incompatible\n                                          // signature for trait\n}\n```\n",
+    "description": "E0643"
+  },
+  "E0646": {
+    "message": "\nIt is not possible to define `main` with a where clause.\nErroneous code example:\n\n```compile_fail,E0646\nfn main() where i32: Copy { // error: main function is not allowed to have\n                            // a where clause\n}\n```\n",
+    "description": "E0646"
+  },
+  "E0647": {
+    "message": "\nIt is not possible to define `start` with a where clause.\nErroneous code example:\n\n```compile_fail,E0647\n#![feature(start)]\n\n#[start]\nfn start(_: isize, _: *const *const u8) -> isize where (): Copy {\n    //^ error: start function is not allowed to have a where clause\n    0\n}\n```\n",
+    "description": "E0647"
+  },
+  "E0648": {
+    "message": "\n`export_name` attributes may not contain null characters (`\\0`).\n\n```compile_fail,E0648\n#[export_name=\"\\0foo\"] // error: `export_name` may not contain null characters\npub fn bar() {}\n```\n",
+    "description": "E0648"
+  },
+  "E0689": {
+    "message": "\nThis error indicates that the numeric value for the method being passed exists\nbut the type of the numeric value or binding could not be identified.\n\nThe error happens on numeric literals:\n\n```compile_fail,E0689\n2.0.neg();\n```\n\nand on numeric bindings without an identified concrete type:\n\n```compile_fail,E0689\nlet x = 2.0;\nx.neg();  // same error as above\n```\n\nBecause of this, you must give the numeric literal or binding a type:\n\n```\nuse std::ops::Neg;\n\nlet _ = 2.0_f32.neg();\nlet x: f32 = 2.0;\nlet _ = x.neg();\nlet _ = (2.0 as f32).neg();\n```\n",
+    "description": "E0689"
+  },
+  "E0690": {
+    "message": "\nA struct with the representation hint `repr(transparent)` had zero or more than\non fields that were not guaranteed to be zero-sized.\n\nErroneous code example:\n\n```compile_fail,E0690\n#[repr(transparent)]\nstruct LengthWithUnit<U> { // error: transparent struct needs exactly one\n    value: f32,            //        non-zero-sized field, but has 2\n    unit: U,\n}\n```\n\nBecause transparent structs are represented exactly like one of their fields at\nrun time, said field must be uniquely determined. If there is no field, or if\nthere are multiple fields, it is not clear how the struct should be represented.\nNote that fields of zero-typed types (e.g., `PhantomData`) can also exist\nalongside the field that contains the actual data, they do not count for this\nerror. When generic types are involved (as in the above example), an error is\nreported because the type parameter could be non-zero-sized.\n\nTo combine `repr(transparent)` with type parameters, `PhantomData` may be\nuseful:\n\n```\nuse std::marker::PhantomData;\n\n#[repr(transparent)]\nstruct LengthWithUnit<U> {\n    value: f32,\n    unit: PhantomData<U>,\n}\n```\n",
+    "description": "E0690"
+  },
+  "E0691": {
+    "message": "\nA struct with the `repr(transparent)` representation hint contains a zero-sized\nfield that requires non-trivial alignment.\n\nErroneous code example:\n\n```compile_fail,E0691\n#![feature(repr_align)]\n\n#[repr(align(32))]\nstruct ForceAlign32;\n\n#[repr(transparent)]\nstruct Wrapper(f32, ForceAlign32); // error: zero-sized field in transparent\n                                   //        struct has alignment larger than 1\n```\n\nA transparent struct is supposed to be represented exactly like the piece of\ndata it contains. Zero-sized fields with different alignment requirements\npotentially conflict with this property. In the example above, `Wrapper` would\nhave to be aligned to 32 bytes even though `f32` has a smaller alignment\nrequirement.\n\nConsider removing the over-aligned zero-sized field:\n\n```\n#[repr(transparent)]\nstruct Wrapper(f32);\n```\n\nAlternatively, `PhantomData<T>` has alignment 1 for all `T`, so you can use it\nif you need to keep the field for some reason:\n\n```\n#![feature(repr_align)]\n\nuse std::marker::PhantomData;\n\n#[repr(align(32))]\nstruct ForceAlign32;\n\n#[repr(transparent)]\nstruct Wrapper(f32, PhantomData<ForceAlign32>);\n```\n\nNote that empty arrays `[T; 0]` have the same alignment requirement as the\nelement type `T`. Also note that the error is conservatively reported even when\nthe alignment of the zero-sized type is less than or equal to the data field's\nalignment.\n",
+    "description": "E0691"
+  },
+  "E0699": {
+    "message": "\nA method was called on a raw pointer whose inner type wasn't completely known.\n\nFor example, you may have done something like:\n\n```compile_fail\n# #![deny(warnings)]\nlet foo = &1;\nlet bar = foo as *const _;\nif bar.is_null() {\n    // ...\n}\n```\n\nHere, the type of `bar` isn't known; it could be a pointer to anything. Instead,\nspecify a type for the pointer (preferably something that makes sense for the\nthing you're pointing to):\n\n```\nlet foo = &1;\nlet bar = foo as *const i32;\nif bar.is_null() {\n    // ...\n}\n```\n\nEven though `is_null()` exists as a method on any raw pointer, Rust shows this\nerror because  Rust allows for `self` to have arbitrary types (behind the\narbitrary_self_types feature flag).\n\nThis means that someone can specify such a function:\n\n```ignore (cannot-doctest-feature-doesnt-exist-yet)\nimpl Foo {\n    fn is_null(self: *const Self) -> bool {\n        // do something else\n    }\n}\n```\n\nand now when you call `.is_null()` on a raw pointer to `Foo`, there's ambiguity.\n\nGiven that we don't know what type the pointer is, and there's potential\nambiguity for some types, we disallow calling methods on raw pointers when\nthe type is unknown.\n",
+    "description": "E0699"
+  },
+  "E0714": {
+    "message": "\nA `#[marker]` trait contained an associated item.\n\nThe items of marker traits cannot be overridden, so there's no need to have them\nwhen they cannot be changed per-type anyway.  If you wanted them for ergonomic\nreasons, consider making an extension trait instead.\n",
+    "description": "E0714"
+  },
+  "E0715": {
+    "message": "\nAn `impl` for a `#[marker]` trait tried to override an associated item.\n\nBecause marker traits are allowed to have multiple implementations for the same\ntype, it's not allowed to override anything in those implementations, as it\nwould be ambiguous which override should actually be used.\n",
+    "description": "E0715"
+  },
+  "E0720": {
+    "message": "\nAn `impl Trait` type expands to a recursive type.\n\nAn `impl Trait` type must be expandable to a concrete type that contains no\n`impl Trait` types. For example the following example tries to create an\n`impl Trait` type `T` that is equal to `[T, T]`:\n\n```compile_fail,E0720\nfn make_recursive_type() -> impl Sized {\n    [make_recursive_type(), make_recursive_type()]\n}\n```\n",
+    "description": "E0720"
+  },
+  "E0730": {
+    "message": "\nAn array without a fixed length was pattern-matched.\n\nExample of erroneous code:\n\n```compile_fail,E0730\n#![feature(const_generics)]\n\nfn is_123<const N: usize>(x: [u32; N]) -> bool {\n    match x {\n        [1, 2, 3] => true, // error: cannot pattern-match on an\n                           //        array without a fixed length\n        _ => false\n    }\n}\n```\n\nEnsure that the pattern is consistent with the size of the matched\narray. Additional elements can be matched with `..`:\n\n```\n#![feature(slice_patterns)]\n\nlet r = &[1, 2, 3, 4];\nmatch r {\n    &[a, b, ..] => { // ok!\n        println!(\"a={}, b={}\", a, b);\n    }\n}\n```\n",
+    "description": "E0730"
+  }
+}

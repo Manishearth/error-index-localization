@@ -1,0 +1,10 @@
+{
+  "E0668": {
+    "message": "\nMalformed inline assembly rejected by LLVM.\n\nLLVM checks the validity of the constraints and the assembly string passed to\nit. This error implies that LLVM seems something wrong with the inline\nassembly call.\n\nIn particular, it can happen if you forgot the closing bracket of a register\nconstraint (see issue #51430):\n```ignore (error-emitted-at-codegen-which-cannot-be-handled-by-compile_fail)\n#![feature(asm)]\n\nfn main() {\n    let rax: u64;\n    unsafe {\n        asm!(\"\" :\"={rax\"(rax));\n        println!(\"Accumulator is: {}\", rax);\n    }\n}\n```\n",
+    "description": "E0668"
+  },
+  "E0669": {
+    "message": "\nCannot convert inline assembly operand to a single LLVM value.\n\nThis error usually happens when trying to pass in a value to an input inline\nassembly operand that is actually a pair of values. In particular, this can\nhappen when trying to pass in a slice, for instance a `&str`. In Rust, these\nvalues are represented internally as a pair of values, the pointer and its\nlength. When passed as an input operand, this pair of values can not be\ncoerced into a register and thus we must fail with an error.\n",
+    "description": "E0669"
+  }
+}

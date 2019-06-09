@@ -1,0 +1,74 @@
+{
+  "E0178": {
+    "message": "\nIn types, the `+` type operator has low precedence, so it is often necessary\nto use parentheses.\n\nFor example:\n\n```compile_fail,E0178\ntrait Foo {}\n\nstruct Bar<'a> {\n    w: &'a Foo + Copy,   // error, use &'a (Foo + Copy)\n    x: &'a Foo + 'a,     // error, use &'a (Foo + 'a)\n    y: &'a mut Foo + 'a, // error, use &'a mut (Foo + 'a)\n    z: fn() -> Foo + 'a, // error, use fn() -> (Foo + 'a)\n}\n```\n\nMore details can be found in [RFC 438].\n\n[RFC 438]: https://github.com/rust-lang/rfcs/pull/438\n",
+    "description": "E0178"
+  },
+  "E0536": {
+    "message": "\nThe `not` cfg-predicate was malformed.\n\nErroneous code example:\n\n```compile_fail,E0536\n#[cfg(not())] // error: expected 1 cfg-pattern\npub fn something() {}\n\npub fn main() {}\n```\n\nThe `not` predicate expects one cfg-pattern. Example:\n\n```\n#[cfg(not(target_os = \"linux\"))] // ok!\npub fn something() {}\n\npub fn main() {}\n```\n\nFor more information about the cfg attribute, read:\nhttps://doc.rust-lang.org/reference.html#conditional-compilation\n",
+    "description": "E0536"
+  },
+  "E0537": {
+    "message": "\nAn unknown predicate was used inside the `cfg` attribute.\n\nErroneous code example:\n\n```compile_fail,E0537\n#[cfg(unknown())] // error: invalid predicate `unknown`\npub fn something() {}\n\npub fn main() {}\n```\n\nThe `cfg` attribute supports only three kinds of predicates:\n\n * any\n * all\n * not\n\nExample:\n\n```\n#[cfg(not(target_os = \"linux\"))] // ok!\npub fn something() {}\n\npub fn main() {}\n```\n\nFor more information about the cfg attribute, read:\nhttps://doc.rust-lang.org/reference.html#conditional-compilation\n",
+    "description": "E0537"
+  },
+  "E0538": {
+    "message": "\nAttribute contains same meta item more than once.\n\nErroneous code example:\n\n```compile_fail,E0538\n#[deprecated(\n    since=\"1.0.0\",\n    note=\"First deprecation note.\",\n    note=\"Second deprecation note.\" // error: multiple same meta item\n)]\nfn deprecated_function() {}\n```\n\nMeta items are the key-value pairs inside of an attribute. Each key may only be\nused once in each attribute.\n\nTo fix the problem, remove all but one of the meta items with the same key.\n\nExample:\n\n```\n#[deprecated(\n    since=\"1.0.0\",\n    note=\"First deprecation note.\"\n)]\nfn deprecated_function() {}\n```\n",
+    "description": "E0538"
+  },
+  "E0541": {
+    "message": "\nAn unknown meta item was used.\n\nErroneous code example:\n\n```compile_fail,E0541\n#[deprecated(\n    since=\"1.0.0\",\n    // error: unknown meta item\n    reason=\"Example invalid meta item. Should be 'note'\")\n]\nfn deprecated_function() {}\n```\n\nMeta items are the key-value pairs inside of an attribute. The keys provided\nmust be one of the valid keys for the specified attribute.\n\nTo fix the problem, either remove the unknown meta item, or rename it if you\nprovided the wrong name.\n\nIn the erroneous code example above, the wrong name was provided, so changing\nto a correct one it will fix the error. Example:\n\n```\n#[deprecated(\n    since=\"1.0.0\",\n    note=\"This is a valid meta item for the deprecated attribute.\"\n)]\nfn deprecated_function() {}\n```\n",
+    "description": "E0541"
+  },
+  "E0552": {
+    "message": "\nA unrecognized representation attribute was used.\n\nErroneous code example:\n\n```compile_fail,E0552\n#[repr(D)] // error: unrecognized representation hint\nstruct MyStruct {\n    my_field: usize\n}\n```\n\nYou can use a `repr` attribute to tell the compiler how you want a struct or\nenum to be laid out in memory.\n\nMake sure you're using one of the supported options:\n\n```\n#[repr(C)] // ok!\nstruct MyStruct {\n    my_field: usize\n}\n```\n\nFor more information about specifying representations, see the [\"Alternative\nRepresentations\" section] of the Rustonomicon.\n\n[\"Alternative Representations\" section]: https://doc.rust-lang.org/nomicon/other-reprs.html\n",
+    "description": "E0552"
+  },
+  "E0554": {
+    "message": "\nFeature attributes are only allowed on the nightly release channel. Stable or\nbeta compilers will not comply.\n\nExample of erroneous code (on a stable compiler):\n\n```ignore (depends on release channel)\n#![feature(non_ascii_idents)] // error: #![feature] may not be used on the\n                              //        stable release channel\n```\n\nIf you need the feature, make sure to use a nightly release of the compiler\n(but be warned that the feature may be removed or altered in the future).\n",
+    "description": "E0554"
+  },
+  "E0557": {
+    "message": "\nA feature attribute named a feature that has been removed.\n\nErroneous code example:\n\n```compile_fail,E0557\n#![feature(managed_boxes)] // error: feature has been removed\n```\n\nDelete the offending feature attribute.\n",
+    "description": "E0557"
+  },
+  "E0565": {
+    "message": "\nA literal was used in a built-in attribute that doesn't support literals.\n\nErroneous code example:\n\n```ignore (compile_fail not working here; see Issue #43707)\n#[inline(\"always\")] // error: unsupported literal\npub fn something() {}\n```\n\nLiterals in attributes are new and largely unsupported in built-in attributes.\nWork to support literals where appropriate is ongoing. Try using an unquoted\nname instead:\n\n```\n#[inline(always)]\npub fn something() {}\n```\n",
+    "description": "E0565"
+  },
+  "E0583": {
+    "message": "\nA file wasn't found for an out-of-line module.\n\nErroneous code example:\n\n```ignore (compile_fail not working here; see Issue #43707)\nmod file_that_doesnt_exist; // error: file not found for module\n\nfn main() {}\n```\n\nPlease be sure that a file corresponding to the module exists. If you\nwant to use a module named `file_that_doesnt_exist`, you need to have a file\nnamed `file_that_doesnt_exist.rs` or `file_that_doesnt_exist/mod.rs` in the\nsame directory.\n",
+    "description": "E0583"
+  },
+  "E0585": {
+    "message": "\nA documentation comment that doesn't document anything was found.\n\nErroneous code example:\n\n```compile_fail,E0585\nfn main() {\n    // The following doc comment will fail:\n    /// This is a useless doc comment!\n}\n```\n\nDocumentation comments need to be followed by items, including functions,\ntypes, modules, etc. Examples:\n\n```\n/// I'm documenting the following struct:\nstruct Foo;\n\n/// I'm documenting the following function:\nfn foo() {}\n```\n",
+    "description": "E0585"
+  },
+  "E0586": {
+    "message": "\nAn inclusive range was used with no end.\n\nErroneous code example:\n\n```compile_fail,E0586\nfn main() {\n    let tmp = vec![0, 1, 2, 3, 4, 4, 3, 3, 2, 1];\n    let x = &tmp[1..=]; // error: inclusive range was used with no end\n}\n```\n\nAn inclusive range needs an end in order to *include* it. If you just need a\nstart and no end, use a non-inclusive range (with `..`):\n\n```\nfn main() {\n    let tmp = vec![0, 1, 2, 3, 4, 4, 3, 3, 2, 1];\n    let x = &tmp[1..]; // ok!\n}\n```\n\nOr put an end to your inclusive range:\n\n```\nfn main() {\n    let tmp = vec![0, 1, 2, 3, 4, 4, 3, 3, 2, 1];\n    let x = &tmp[1..=3]; // ok!\n}\n```\n",
+    "description": "E0586"
+  },
+  "E0589": {
+    "message": "\nThe value of `N` that was specified for `repr(align(N))` was not a power\nof two, or was greater than 2^29.\n\n```compile_fail,E0589\n#[repr(align(15))] // error: invalid `repr(align)` attribute: not a power of two\nenum Foo {\n    Bar(u64),\n}\n```\n",
+    "description": "E0589"
+  },
+  "E0633": {
+    "message": "\nThe `unwind` attribute was malformed.\n\nErroneous code example:\n\n```ignore (compile_fail not working here; see Issue #43707)\n#[unwind()] // error: expected one argument\npub extern fn something() {}\n\nfn main() {}\n```\n\nThe `#[unwind]` attribute should be used as follows:\n\n- `#[unwind(aborts)]` -- specifies that if a non-Rust ABI function\n  should abort the process if it attempts to unwind. This is the safer\n  and preferred option.\n\n- `#[unwind(allowed)]` -- specifies that a non-Rust ABI function\n  should be allowed to unwind. This can easily result in Undefined\n  Behavior (UB), so be careful.\n\nNB. The default behavior here is \"allowed\", but this is unspecified\nand likely to change in the future.\n\n",
+    "description": "E0633"
+  },
+  "E0658": {
+    "message": "\nAn unstable feature was used.\n\nErroneous code example:\n\n```compile_fail,E658\n#[repr(u128)] // error: use of unstable library feature 'repr128'\nenum Foo {\n    Bar(u64),\n}\n```\n\nIf you're using a stable or a beta version of rustc, you won't be able to use\nany unstable features. In order to do so, please switch to a nightly version of\nrustc (by using rustup).\n\nIf you're using a nightly version of rustc, just add the corresponding feature\nto be able to use it:\n\n```\n#![feature(repr128)]\n\n#[repr(u128)] // ok!\nenum Foo {\n    Bar(u64),\n}\n```\n",
+    "description": "E0658"
+  },
+  "E0704": {
+    "message": "\nThis error indicates that a incorrect visibility restriction was specified.\n\nExample of erroneous code:\n\n```compile_fail,E0704\nmod foo {\n    pub(foo) struct Bar {\n        x: i32\n    }\n}\n```\n\nTo make struct `Bar` only visible in module `foo` the `in` keyword should be\nused:\n```\nmod foo {\n    pub(in crate::foo) struct Bar {\n        x: i32\n    }\n}\n# fn main() {}\n```\n\nFor more information see the Rust Reference on [Visibility].\n\n[Visibility]: https://doc.rust-lang.org/reference/visibility-and-privacy.html\n",
+    "description": "E0704"
+  },
+  "E0705": {
+    "message": "\nA `#![feature]` attribute was declared for a feature that is stable in\nthe current edition, but not in all editions.\n\nErroneous code example:\n\n```ignore (limited to a warning during 2018 edition development)\n#![feature(rust_2018_preview)]\n#![feature(test_2018_feature)] // error: the feature\n                               // `test_2018_feature` is\n                               // included in the Rust 2018 edition\n```\n\n",
+    "description": "E0705"
+  },
+  "E0725": {
+    "message": "\nA feature attribute named a feature that was disallowed in the compiler\ncommand line flags.\n\nErroneous code example:\n\n```ignore (can't specify compiler flags from doctests)\n#![feature(never_type)] // error: the feature `never_type` is not in\n                        // the list of allowed features\n```\n\nDelete the offending feature attribute, or add it to the list of allowed\nfeatures in the `-Z allow_features` flag.\n",
+    "description": "E0725"
+  }
+}

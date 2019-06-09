@@ -1,0 +1,186 @@
+{
+  "E0128": {
+    "message": "\nType parameter defaults can only use parameters that occur before them.\nErroneous code example:\n\n```compile_fail,E0128\nstruct Foo<T=U, U=()> {\n    field1: T,\n    filed2: U,\n}\n// error: type parameters with a default cannot use forward declared\n// identifiers\n```\n\nSince type parameters are evaluated in-order, you may be able to fix this issue\nby doing:\n\n```\nstruct Foo<U=(), T=U> {\n    field1: T,\n    filed2: U,\n}\n```\n\nPlease also verify that this wasn't because of a name-clash and rename the type\nparameter if so.\n",
+    "description": "E0128"
+  },
+  "E0154": {
+    "message": "\n#### Note: this error code is no longer emitted by the compiler.\n\nImports (`use` statements) are not allowed after non-item statements, such as\nvariable declarations and expression statements.\n\nHere is an example that demonstrates the error:\n\n```\nfn f() {\n    // Variable declaration before import\n    let x = 0;\n    use std::io::Read;\n    // ...\n}\n```\n\nThe solution is to declare the imports at the top of the block, function, or\nfile.\n\nHere is the previous example again, with the correct order:\n\n```\nfn f() {\n    use std::io::Read;\n    let x = 0;\n    // ...\n}\n```\n\nSee the Declaration Statements section of the reference for more information\nabout what constitutes an Item declaration and what does not:\n\nhttps://doc.rust-lang.org/reference.html#statements\n",
+    "description": "E0154"
+  },
+  "E0251": {
+    "message": "\n#### Note: this error code is no longer emitted by the compiler.\n\nTwo items of the same name cannot be imported without rebinding one of the\nitems under a new local name.\n\nAn example of this error:\n\n```\nuse foo::baz;\nuse bar::*; // error, do `use foo::baz as quux` instead on the previous line\n\nfn main() {}\n\nmod foo {\n    pub struct baz;\n}\n\nmod bar {\n    pub mod baz {}\n}\n```\n",
+    "description": "E0251"
+  },
+  "E0252": {
+    "message": "\nTwo items of the same name cannot be imported without rebinding one of the\nitems under a new local name.\n\nErroneous code example:\n\n```compile_fail,E0252\nuse foo::baz;\nuse bar::baz; // error, do `use bar::baz as quux` instead\n\nfn main() {}\n\nmod foo {\n    pub struct baz;\n}\n\nmod bar {\n    pub mod baz {}\n}\n```\n\nYou can use aliases in order to fix this error. Example:\n\n```\nuse foo::baz as foo_baz;\nuse bar::baz; // ok!\n\nfn main() {}\n\nmod foo {\n    pub struct baz;\n}\n\nmod bar {\n    pub mod baz {}\n}\n```\n\nOr you can reference the item with its parent:\n\n```\nuse bar::baz;\n\nfn main() {\n    let x = foo::baz; // ok!\n}\n\nmod foo {\n    pub struct baz;\n}\n\nmod bar {\n    pub mod baz {}\n}\n```\n",
+    "description": "E0252"
+  },
+  "E0253": {
+    "message": "\nAttempt was made to import an unimportable value. This can happen when trying\nto import a method from a trait.\n\nErroneous code example:\n\n```compile_fail,E0253\nmod foo {\n    pub trait MyTrait {\n        fn do_something();\n    }\n}\n\nuse foo::MyTrait::do_something;\n// error: `do_something` is not directly importable\n\nfn main() {}\n```\n\nIt's invalid to directly import methods belonging to a trait or concrete type.\n",
+    "description": "E0253"
+  },
+  "E0254": {
+    "message": "\nAttempt was made to import an item whereas an extern crate with this name has\nalready been imported.\n\nErroneous code example:\n\n```compile_fail,E0254\nextern crate core;\n\nmod foo {\n    pub trait core {\n        fn do_something();\n    }\n}\n\nuse foo::core;  // error: an extern crate named `core` has already\n                //        been imported in this module\n\nfn main() {}\n```\n\nTo fix this issue, you have to rename at least one of the two imports.\nExample:\n\n```\nextern crate core as libcore; // ok!\n\nmod foo {\n    pub trait core {\n        fn do_something();\n    }\n}\n\nuse foo::core;\n\nfn main() {}\n```\n",
+    "description": "E0254"
+  },
+  "E0255": {
+    "message": "\nYou can't import a value whose name is the same as another value defined in the\nmodule.\n\nErroneous code example:\n\n```compile_fail,E0255\nuse bar::foo; // error: an item named `foo` is already in scope\n\nfn foo() {}\n\nmod bar {\n     pub fn foo() {}\n}\n\nfn main() {}\n```\n\nYou can use aliases in order to fix this error. Example:\n\n```\nuse bar::foo as bar_foo; // ok!\n\nfn foo() {}\n\nmod bar {\n     pub fn foo() {}\n}\n\nfn main() {}\n```\n\nOr you can reference the item with its parent:\n\n```\nfn foo() {}\n\nmod bar {\n     pub fn foo() {}\n}\n\nfn main() {\n    bar::foo(); // we get the item by referring to its parent\n}\n```\n",
+    "description": "E0255"
+  },
+  "E0256": {
+    "message": "\n#### Note: this error code is no longer emitted by the compiler.\n\nYou can't import a type or module when the name of the item being imported is\nthe same as another type or submodule defined in the module.\n\nAn example of this error:\n\n```compile_fail\nuse foo::Bar; // error\n\ntype Bar = u32;\n\nmod foo {\n    pub mod Bar { }\n}\n\nfn main() {}\n```\n",
+    "description": "E0256"
+  },
+  "E0259": {
+    "message": "\nThe name chosen for an external crate conflicts with another external crate\nthat has been imported into the current module.\n\nErroneous code example:\n\n```compile_fail,E0259\nextern crate core;\nextern crate std as core;\n\nfn main() {}\n```\n\nThe solution is to choose a different name that doesn't conflict with any\nexternal crate imported into the current module.\n\nCorrect example:\n\n```\nextern crate core;\nextern crate std as other_name;\n\nfn main() {}\n```\n",
+    "description": "E0259"
+  },
+  "E0260": {
+    "message": "\nThe name for an item declaration conflicts with an external crate's name.\n\nErroneous code example:\n\n```compile_fail,E0260\nextern crate core;\n\nstruct core;\n\nfn main() {}\n```\n\nThere are two possible solutions:\n\nSolution #1: Rename the item.\n\n```\nextern crate core;\n\nstruct xyz;\n```\n\nSolution #2: Import the crate with a different name.\n\n```\nextern crate core as xyz;\n\nstruct abc;\n```\n\nSee the Declaration Statements section of the reference for more information\nabout what constitutes an Item declaration and what does not:\n\nhttps://doc.rust-lang.org/reference.html#statements\n",
+    "description": "E0260"
+  },
+  "E0364": {
+    "message": "\nPrivate items cannot be publicly re-exported. This error indicates that you\nattempted to `pub use` a type or value that was not itself public.\n\nErroneous code example:\n\n```compile_fail\nmod foo {\n    const X: u32 = 1;\n}\n\npub use foo::X;\n\nfn main() {}\n```\n\nThe solution to this problem is to ensure that the items that you are\nre-exporting are themselves marked with `pub`:\n\n```\nmod foo {\n    pub const X: u32 = 1;\n}\n\npub use foo::X;\n\nfn main() {}\n```\n\nSee the 'Use Declarations' section of the reference for more information on\nthis topic:\n\nhttps://doc.rust-lang.org/reference.html#use-declarations\n",
+    "description": "E0364"
+  },
+  "E0365": {
+    "message": "\nPrivate modules cannot be publicly re-exported. This error indicates that you\nattempted to `pub use` a module that was not itself public.\n\nErroneous code example:\n\n```compile_fail,E0365\nmod foo {\n    pub const X: u32 = 1;\n}\n\npub use foo as foo2;\n\nfn main() {}\n```\n\nThe solution to this problem is to ensure that the module that you are\nre-exporting is itself marked with `pub`:\n\n```\npub mod foo {\n    pub const X: u32 = 1;\n}\n\npub use foo as foo2;\n\nfn main() {}\n```\n\nSee the 'Use Declarations' section of the reference for more information\non this topic:\n\nhttps://doc.rust-lang.org/reference.html#use-declarations\n",
+    "description": "E0365"
+  },
+  "E0401": {
+    "message": "\nInner items do not inherit type or const parameters from the functions\nthey are embedded in.\n\nErroneous code example:\n\n```compile_fail,E0401\nfn foo<T>(x: T) {\n    fn bar(y: T) { // T is defined in the \"outer\" function\n        // ..\n    }\n    bar(x);\n}\n```\n\nNor will this:\n\n```compile_fail,E0401\nfn foo<T>(x: T) {\n    type MaybeT = Option<T>;\n    // ...\n}\n```\n\nOr this:\n\n```compile_fail,E0401\nfn foo<T>(x: T) {\n    struct Foo {\n        x: T,\n    }\n    // ...\n}\n```\n\nItems inside functions are basically just like top-level items, except\nthat they can only be used from the function they are in.\n\nThere are a couple of solutions for this.\n\nIf the item is a function, you may use a closure:\n\n```\nfn foo<T>(x: T) {\n    let bar = |y: T| { // explicit type annotation may not be necessary\n        // ..\n    };\n    bar(x);\n}\n```\n\nFor a generic item, you can copy over the parameters:\n\n```\nfn foo<T>(x: T) {\n    fn bar<T>(y: T) {\n        // ..\n    }\n    bar(x);\n}\n```\n\n```\nfn foo<T>(x: T) {\n    type MaybeT<T> = Option<T>;\n}\n```\n\nBe sure to copy over any bounds as well:\n\n```\nfn foo<T: Copy>(x: T) {\n    fn bar<T: Copy>(y: T) {\n        // ..\n    }\n    bar(x);\n}\n```\n\n```\nfn foo<T: Copy>(x: T) {\n    struct Foo<T: Copy> {\n        x: T,\n    }\n}\n```\n\nThis may require additional type hints in the function body.\n\nIn case the item is a function inside an `impl`, defining a private helper\nfunction might be easier:\n\n```\n# struct Foo<T>(T);\nimpl<T> Foo<T> {\n    pub fn foo(&self, x: T) {\n        self.bar(x);\n    }\n\n    fn bar(&self, y: T) {\n        // ..\n    }\n}\n```\n\nFor default impls in traits, the private helper solution won't work, however\nclosures or copying the parameters should still work.\n",
+    "description": "E0401"
+  },
+  "E0403": {
+    "message": "\nSome type parameters have the same name.\n\nErroneous code example:\n\n```compile_fail,E0403\nfn foo<T, T>(s: T, u: T) {} // error: the name `T` is already used for a type\n                            //        parameter in this type parameter list\n```\n\nPlease verify that none of the type parameters are misspelled, and rename any\nclashing parameters. Example:\n\n```\nfn foo<T, Y>(s: T, u: Y) {} // ok!\n```\n",
+    "description": "E0403"
+  },
+  "E0404": {
+    "message": "\nYou tried to use something which is not a trait in a trait position, such as\na bound or `impl`.\n\nErroneous code example:\n\n```compile_fail,E0404\nstruct Foo;\nstruct Bar;\n\nimpl Foo for Bar {} // error: `Foo` is not a trait\n```\n\nAnother erroneous code example:\n\n```compile_fail,E0404\nstruct Foo;\n\nfn bar<T: Foo>(t: T) {} // error: `Foo` is not a trait\n```\n\nPlease verify that you didn't misspell the trait's name or otherwise use the\nwrong identifier. Example:\n\n```\ntrait Foo {\n    // some functions\n}\nstruct Bar;\n\nimpl Foo for Bar { // ok!\n    // functions implementation\n}\n```\n\nor\n\n```\ntrait Foo {\n    // some functions\n}\n\nfn bar<T: Foo>(t: T) {} // ok!\n```\n\n",
+    "description": "E0404"
+  },
+  "E0405": {
+    "message": "\nThe code refers to a trait that is not in scope.\n\nErroneous code example:\n\n```compile_fail,E0405\nstruct Foo;\n\nimpl SomeTrait for Foo {} // error: trait `SomeTrait` is not in scope\n```\n\nPlease verify that the name of the trait wasn't misspelled and ensure that it\nwas imported. Example:\n\n```\n# #[cfg(for_demonstration_only)]\n// solution 1:\nuse some_file::SomeTrait;\n\n// solution 2:\ntrait SomeTrait {\n    // some functions\n}\n\nstruct Foo;\n\nimpl SomeTrait for Foo { // ok!\n    // implements functions\n}\n```\n",
+    "description": "E0405"
+  },
+  "E0407": {
+    "message": "\nA definition of a method not in the implemented trait was given in a trait\nimplementation.\n\nErroneous code example:\n\n```compile_fail,E0407\ntrait Foo {\n    fn a();\n}\n\nstruct Bar;\n\nimpl Foo for Bar {\n    fn a() {}\n    fn b() {} // error: method `b` is not a member of trait `Foo`\n}\n```\n\nPlease verify you didn't misspell the method name and you used the correct\ntrait. First example:\n\n```\ntrait Foo {\n    fn a();\n    fn b();\n}\n\nstruct Bar;\n\nimpl Foo for Bar {\n    fn a() {}\n    fn b() {} // ok!\n}\n```\n\nSecond example:\n\n```\ntrait Foo {\n    fn a();\n}\n\nstruct Bar;\n\nimpl Foo for Bar {\n    fn a() {}\n}\n\nimpl Bar {\n    fn b() {}\n}\n```\n",
+    "description": "E0407"
+  },
+  "E0408": {
+    "message": "\nAn \"or\" pattern was used where the variable bindings are not consistently bound\nacross patterns.\n\nErroneous code example:\n\n```compile_fail,E0408\nmatch x {\n    Some(y) | None => { /* use y */ } // error: variable `y` from pattern #1 is\n                                      //        not bound in pattern #2\n    _ => ()\n}\n```\n\nHere, `y` is bound to the contents of the `Some` and can be used within the\nblock corresponding to the match arm. However, in case `x` is `None`, we have\nnot specified what `y` is, and the block will use a nonexistent variable.\n\nTo fix this error, either split into multiple match arms:\n\n```\nlet x = Some(1);\nmatch x {\n    Some(y) => { /* use y */ }\n    None => { /* ... */ }\n}\n```\n\nor, bind the variable to a field of the same type in all sub-patterns of the\nor pattern:\n\n```\nlet x = (0, 2);\nmatch x {\n    (0, y) | (y, 0) => { /* use y */}\n    _ => {}\n}\n```\n\nIn this example, if `x` matches the pattern `(0, _)`, the second field is set\nto `y`. If it matches `(_, 0)`, the first field is set to `y`; so in all\ncases `y` is set to some value.\n",
+    "description": "E0408"
+  },
+  "E0409": {
+    "message": "\nAn \"or\" pattern was used where the variable bindings are not consistently bound\nacross patterns.\n\nErroneous code example:\n\n```compile_fail,E0409\nlet x = (0, 2);\nmatch x {\n    (0, ref y) | (y, 0) => { /* use y */} // error: variable `y` is bound with\n                                          //        different mode in pattern #2\n                                          //        than in pattern #1\n    _ => ()\n}\n```\n\nHere, `y` is bound by-value in one case and by-reference in the other.\n\nTo fix this error, just use the same mode in both cases.\nGenerally using `ref` or `ref mut` where not already used will fix this:\n\n```\nlet x = (0, 2);\nmatch x {\n    (0, ref y) | (ref y, 0) => { /* use y */}\n    _ => ()\n}\n```\n\nAlternatively, split the pattern:\n\n```\nlet x = (0, 2);\nmatch x {\n    (y, 0) => { /* use y */ }\n    (0, ref y) => { /* use y */}\n    _ => ()\n}\n```\n",
+    "description": "E0409"
+  },
+  "E0411": {
+    "message": "\nThe `Self` keyword was used outside an impl, trait, or type definition.\n\nErroneous code example:\n\n```compile_fail,E0411\n<Self>::foo; // error: use of `Self` outside of an impl, trait, or type\n             // definition\n```\n\nThe `Self` keyword represents the current type, which explains why it can only\nbe used inside an impl, trait, or type definition. It gives access to the\nassociated items of a type:\n\n```\ntrait Foo {\n    type Bar;\n}\n\ntrait Baz : Foo {\n    fn bar() -> Self::Bar; // like this\n}\n```\n\nHowever, be careful when two types have a common associated type:\n\n```compile_fail\ntrait Foo {\n    type Bar;\n}\n\ntrait Foo2 {\n    type Bar;\n}\n\ntrait Baz : Foo + Foo2 {\n    fn bar() -> Self::Bar;\n    // error: ambiguous associated type `Bar` in bounds of `Self`\n}\n```\n\nThis problem can be solved by specifying from which trait we want to use the\n`Bar` type:\n\n```\ntrait Foo {\n    type Bar;\n}\n\ntrait Foo2 {\n    type Bar;\n}\n\ntrait Baz : Foo + Foo2 {\n    fn bar() -> <Self as Foo>::Bar; // ok!\n}\n```\n",
+    "description": "E0411"
+  },
+  "E0412": {
+    "message": "\nThe type name used is not in scope.\n\nErroneous code examples:\n\n```compile_fail,E0412\nimpl Something {} // error: type name `Something` is not in scope\n\n// or:\n\ntrait Foo {\n    fn bar(N); // error: type name `N` is not in scope\n}\n\n// or:\n\nfn foo(x: T) {} // type name `T` is not in scope\n```\n\nTo fix this error, please verify you didn't misspell the type name, you did\ndeclare it or imported it into the scope. Examples:\n\n```\nstruct Something;\n\nimpl Something {} // ok!\n\n// or:\n\ntrait Foo {\n    type N;\n\n    fn bar(_: Self::N); // ok!\n}\n\n// or:\n\nfn foo<T>(x: T) {} // ok!\n```\n\nAnother case that causes this error is when a type is imported into a parent\nmodule. To fix this, you can follow the suggestion and use File directly or\n`use super::File;` which will import the types from the parent namespace. An\nexample that causes this error is below:\n\n```compile_fail,E0412\nuse std::fs::File;\n\nmod foo {\n    fn some_function(f: File) {}\n}\n```\n\n```\nuse std::fs::File;\n\nmod foo {\n    // either\n    use super::File;\n    // or\n    // use std::fs::File;\n    fn foo(f: File) {}\n}\n# fn main() {} // don't insert it for us; that'll break imports\n```\n",
+    "description": "E0412"
+  },
+  "E0415": {
+    "message": "\nMore than one function parameter have the same name.\n\nErroneous code example:\n\n```compile_fail,E0415\nfn foo(f: i32, f: i32) {} // error: identifier `f` is bound more than\n                          //        once in this parameter list\n```\n\nPlease verify you didn't misspell parameters' name. Example:\n\n```\nfn foo(f: i32, g: i32) {} // ok!\n```\n",
+    "description": "E0415"
+  },
+  "E0416": {
+    "message": "\nAn identifier is bound more than once in a pattern.\n\nErroneous code example:\n\n```compile_fail,E0416\nmatch (1, 2) {\n    (x, x) => {} // error: identifier `x` is bound more than once in the\n                 //        same pattern\n}\n```\n\nPlease verify you didn't misspell identifiers' name. Example:\n\n```\nmatch (1, 2) {\n    (x, y) => {} // ok!\n}\n```\n\nOr maybe did you mean to unify? Consider using a guard:\n\n```\n# let (A, B, C) = (1, 2, 3);\nmatch (A, B, C) {\n    (x, x2, see) if x == x2 => { /* A and B are equal, do one thing */ }\n    (y, z, see) => { /* A and B unequal; do another thing */ }\n}\n```\n",
+    "description": "E0416"
+  },
+  "E0422": {
+    "message": "\nYou are trying to use an identifier that is either undefined or not a struct.\nErroneous code example:\n\n```compile_fail,E0422\nfn main () {\n    let x = Foo { x: 1, y: 2 };\n}\n```\n\nIn this case, `Foo` is undefined, so it inherently isn't anything, and\ndefinitely not a struct.\n\n```compile_fail\nfn main () {\n    let foo = 1;\n    let x = foo { x: 1, y: 2 };\n}\n```\n\nIn this case, `foo` is defined, but is not a struct, so Rust can't use it as\none.\n",
+    "description": "E0422"
+  },
+  "E0423": {
+    "message": "\nAn identifier was used like a function name or a value was expected and the\nidentifier exists but it belongs to a different namespace.\n\nFor (an erroneous) example, here a `struct` variant name were used as a\nfunction:\n\n```compile_fail,E0423\nstruct Foo { a: bool };\n\nlet f = Foo();\n// error: expected function, found `Foo`\n// `Foo` is a struct name, but this expression uses it like a function name\n```\n\nPlease verify you didn't misspell the name of what you actually wanted to use\nhere. Example:\n\n```\nfn Foo() -> u32 { 0 }\n\nlet f = Foo(); // ok!\n```\n\nIt is common to forget the trailing `!` on macro invocations, which would also\nyield this error:\n\n```compile_fail,E0423\nprintln(\"\");\n// error: expected function, found macro `println`\n// did you mean `println!(...)`? (notice the trailing `!`)\n```\n\nAnother case where this error is emitted is when a value is expected, but\nsomething else is found:\n\n```compile_fail,E0423\npub mod a {\n    pub const I: i32 = 1;\n}\n\nfn h1() -> i32 {\n    a.I\n    //~^ ERROR expected value, found module `a`\n    // did you mean `a::I`?\n}\n```\n",
+    "description": "E0423"
+  },
+  "E0424": {
+    "message": "\nThe `self` keyword was used in a static method.\n\nErroneous code example:\n\n```compile_fail,E0424\nstruct Foo;\n\nimpl Foo {\n    fn bar(self) {}\n\n    fn foo() {\n        self.bar(); // error: `self` is not available in a static method.\n    }\n}\n```\n\nPlease check if the method's argument list should have contained `self`,\n`&self`, or `&mut self` (in case you didn't want to create a static\nmethod), and add it if so. Example:\n\n```\nstruct Foo;\n\nimpl Foo {\n    fn bar(self) {}\n\n    fn foo(self) {\n        self.bar(); // ok!\n    }\n}\n```\n",
+    "description": "E0424"
+  },
+  "E0425": {
+    "message": "\nAn unresolved name was used.\n\nErroneous code examples:\n\n```compile_fail,E0425\nsomething_that_doesnt_exist::foo;\n// error: unresolved name `something_that_doesnt_exist::foo`\n\n// or:\n\ntrait Foo {\n    fn bar() {\n        Self; // error: unresolved name `Self`\n    }\n}\n\n// or:\n\nlet x = unknown_variable;  // error: unresolved name `unknown_variable`\n```\n\nPlease verify that the name wasn't misspelled and ensure that the\nidentifier being referred to is valid for the given situation. Example:\n\n```\nenum something_that_does_exist {\n    Foo,\n}\n```\n\nOr:\n\n```\nmod something_that_does_exist {\n    pub static foo : i32 = 0i32;\n}\n\nsomething_that_does_exist::foo; // ok!\n```\n\nOr:\n\n```\nlet unknown_variable = 12u32;\nlet x = unknown_variable; // ok!\n```\n\nIf the item is not defined in the current module, it must be imported using a\n`use` statement, like so:\n\n```\n# mod foo { pub fn bar() {} }\n# fn main() {\nuse foo::bar;\nbar();\n# }\n```\n\nIf the item you are importing is not defined in some super-module of the\ncurrent module, then it must also be declared as public (e.g., `pub fn`).\n",
+    "description": "E0425"
+  },
+  "E0426": {
+    "message": "\nAn undeclared label was used.\n\nErroneous code example:\n\n```compile_fail,E0426\nloop {\n    break 'a; // error: use of undeclared label `'a`\n}\n```\n\nPlease verify you spelt or declare the label correctly. Example:\n\n```\n'a: loop {\n    break 'a; // ok!\n}\n```\n",
+    "description": "E0426"
+  },
+  "E0428": {
+    "message": "\nA type or module has been defined more than once.\n\nErroneous code example:\n\n```compile_fail,E0428\nstruct Bar;\nstruct Bar; // error: duplicate definition of value `Bar`\n```\n\nPlease verify you didn't misspell the type/module's name or remove/rename the\nduplicated one. Example:\n\n```\nstruct Bar;\nstruct Bar2; // ok!\n```\n",
+    "description": "E0428"
+  },
+  "E0429": {
+    "message": "\nThe `self` keyword cannot appear alone as the last segment in a `use`\ndeclaration.\n\nErroneous code example:\n\n```compile_fail,E0429\nuse std::fmt::self; // error: `self` imports are only allowed within a { } list\n```\n\nTo use a namespace itself in addition to some of its members, `self` may appear\nas part of a brace-enclosed list of imports:\n\n```\nuse std::fmt::{self, Debug};\n```\n\nIf you only want to import the namespace, do so directly:\n\n```\nuse std::fmt;\n```\n",
+    "description": "E0429"
+  },
+  "E0430": {
+    "message": "\nThe `self` import appears more than once in the list.\n\nErroneous code example:\n\n```compile_fail,E0430\nuse something::{self, self}; // error: `self` import can only appear once in\n                             //        the list\n```\n\nPlease verify you didn't misspell the import name or remove the duplicated\n`self` import. Example:\n\n```\n# mod something {}\n# fn main() {\nuse something::{self}; // ok!\n# }\n```\n",
+    "description": "E0430"
+  },
+  "E0431": {
+    "message": "\nAn invalid `self` import was made.\n\nErroneous code example:\n\n```compile_fail,E0431\nuse {self}; // error: `self` import can only appear in an import list with a\n            //        non-empty prefix\n```\n\nYou cannot import the current module into itself, please remove this import\nor verify you didn't misspell it.\n",
+    "description": "E0431"
+  },
+  "E0432": {
+    "message": "\nAn import was unresolved.\n\nErroneous code example:\n\n```compile_fail,E0432\nuse something::Foo; // error: unresolved import `something::Foo`.\n```\n\nPaths in `use` statements are relative to the crate root. To import items\nrelative to the current and parent modules, use the `self::` and `super::`\nprefixes, respectively. Also verify that you didn't misspell the import\nname and that the import exists in the module from where you tried to\nimport it. Example:\n\n```\nuse self::something::Foo; // ok!\n\nmod something {\n    pub struct Foo;\n}\n# fn main() {}\n```\n\nOr, if you tried to use a module from an external crate, you may have missed\nthe `extern crate` declaration (which is usually placed in the crate root):\n\n```\nextern crate core; // Required to use the `core` crate\n\nuse core::any;\n# fn main() {}\n```\n",
+    "description": "E0432"
+  },
+  "E0433": {
+    "message": "\nAn undeclared type or module was used.\n\nErroneous code example:\n\n```compile_fail,E0433\nlet map = HashMap::new();\n// error: failed to resolve: use of undeclared type or module `HashMap`\n```\n\nPlease verify you didn't misspell the type/module's name or that you didn't\nforget to import it:\n\n\n```\nuse std::collections::HashMap; // HashMap has been imported.\nlet map: HashMap<u32, u32> = HashMap::new(); // So it can be used!\n```\n",
+    "description": "E0433"
+  },
+  "E0434": {
+    "message": "\nThis error indicates that a variable usage inside an inner function is invalid\nbecause the variable comes from a dynamic environment. Inner functions do not\nhave access to their containing environment.\n\nErroneous code example:\n\n```compile_fail,E0434\nfn foo() {\n    let y = 5;\n    fn bar() -> u32 {\n        y // error: can't capture dynamic environment in a fn item; use the\n          //        || { ... } closure form instead.\n    }\n}\n```\n\nFunctions do not capture local variables. To fix this error, you can replace the\nfunction with a closure:\n\n```\nfn foo() {\n    let y = 5;\n    let bar = || {\n        y\n    };\n}\n```\n\nor replace the captured variable with a constant or a static item:\n\n```\nfn foo() {\n    static mut X: u32 = 4;\n    const Y: u32 = 5;\n    fn bar() -> u32 {\n        unsafe {\n            X = 3;\n        }\n        Y\n    }\n}\n```\n",
+    "description": "E0434"
+  },
+  "E0435": {
+    "message": "\nA non-constant value was used in a constant expression.\n\nErroneous code example:\n\n```compile_fail,E0435\nlet foo = 42;\nlet a: [u8; foo]; // error: attempt to use a non-constant value in a constant\n```\n\nTo fix this error, please replace the value with a constant. Example:\n\n```\nlet a: [u8; 42]; // ok!\n```\n\nOr:\n\n```\nconst FOO: usize = 42;\nlet a: [u8; FOO]; // ok!\n```\n",
+    "description": "E0435"
+  },
+  "E0437": {
+    "message": "\nTrait implementations can only implement associated types that are members of\nthe trait in question. This error indicates that you attempted to implement\nan associated type whose name does not match the name of any associated type\nin the trait.\n\nErroneous code example:\n\n```compile_fail,E0437\ntrait Foo {}\n\nimpl Foo for i32 {\n    type Bar = bool;\n}\n```\n\nThe solution to this problem is to remove the extraneous associated type:\n\n```\ntrait Foo {}\n\nimpl Foo for i32 {}\n```\n",
+    "description": "E0437"
+  },
+  "E0438": {
+    "message": "\nTrait implementations can only implement associated constants that are\nmembers of the trait in question. This error indicates that you\nattempted to implement an associated constant whose name does not\nmatch the name of any associated constant in the trait.\n\nErroneous code example:\n\n```compile_fail,E0438\ntrait Foo {}\n\nimpl Foo for i32 {\n    const BAR: bool = true;\n}\n```\n\nThe solution to this problem is to remove the extraneous associated constant:\n\n```\ntrait Foo {}\n\nimpl Foo for i32 {}\n```\n",
+    "description": "E0438"
+  },
+  "E0466": {
+    "message": "\nMacro import declarations were malformed.\n\nErroneous code examples:\n\n```compile_fail,E0466\n#[macro_use(a_macro(another_macro))] // error: invalid import declaration\nextern crate core as some_crate;\n\n#[macro_use(i_want = \"some_macros\")] // error: invalid import declaration\nextern crate core as another_crate;\n```\n\nThis is a syntax error at the level of attribute declarations. The proper\nsyntax for macro imports is the following:\n\n```ignore (cannot-doctest-multicrate-project)\n// In some_crate:\n#[macro_export]\nmacro_rules! get_tacos {\n    ...\n}\n\n#[macro_export]\nmacro_rules! get_pimientos {\n    ...\n}\n\n// In your crate:\n#[macro_use(get_tacos, get_pimientos)] // It imports `get_tacos` and\nextern crate some_crate;               // `get_pimientos` macros from some_crate\n```\n\nIf you would like to import all exported macros, write `macro_use` with no\narguments.\n",
+    "description": "E0466"
+  },
+  "E0468": {
+    "message": "\nA non-root module attempts to import macros from another crate.\n\nExample of erroneous code:\n\n```compile_fail,E0468\nmod foo {\n    #[macro_use(debug_assert)]  // error: must be at crate root to import\n    extern crate core;          //        macros from another crate\n    fn run_macro() { debug_assert!(true); }\n}\n```\n\nOnly `extern crate` imports at the crate root level are allowed to import\nmacros.\n\nEither move the macro import to crate root or do without the foreign macros.\nThis will work:\n\n```\n#[macro_use(debug_assert)]\nextern crate core;\n\nmod foo {\n    fn run_macro() { debug_assert!(true); }\n}\n# fn main() {}\n```\n",
+    "description": "E0468"
+  },
+  "E0469": {
+    "message": "\nA macro listed for import was not found.\n\nErroneous code example:\n\n```compile_fail,E0469\n#[macro_use(drink, be_merry)] // error: imported macro not found\nextern crate alloc;\n\nfn main() {\n    // ...\n}\n```\n\nEither the listed macro is not contained in the imported crate, or it is not\nexported from the given crate.\n\nThis could be caused by a typo. Did you misspell the macro's name?\n\nDouble-check the names of the macros listed for import, and that the crate\nin question exports them.\n\nA working version would be:\n\n```ignore (cannot-doctest-multicrate-project)\n// In some_crate crate:\n#[macro_export]\nmacro_rules! eat {\n    ...\n}\n\n#[macro_export]\nmacro_rules! drink {\n    ...\n}\n\n// In your crate:\n#[macro_use(eat, drink)]\nextern crate some_crate; //ok!\n```\n",
+    "description": "E0469"
+  },
+  "E0530": {
+    "message": "\nA binding shadowed something it shouldn't.\n\nErroneous code example:\n\n```compile_fail,E0530\nstatic TEST: i32 = 0;\n\nlet r: (i32, i32) = (0, 0);\nmatch r {\n    TEST => {} // error: match bindings cannot shadow statics\n}\n```\n\nTo fix this error, just change the binding's name in order to avoid shadowing\none of the following:\n\n* struct name\n* struct/enum variant\n* static\n* const\n* associated const\n\nFixed example:\n\n```\nstatic TEST: i32 = 0;\n\nlet r: (i32, i32) = (0, 0);\nmatch r {\n    something => {} // ok!\n}\n```\n",
+    "description": "E0530"
+  },
+  "E0532": {
+    "message": "\nPattern arm did not match expected kind.\n\nErroneous code example:\n\n```compile_fail,E0532\nenum State {\n    Succeeded,\n    Failed(String),\n}\n\nfn print_on_failure(state: &State) {\n    match *state {\n        // error: expected unit struct/variant or constant, found tuple\n        //        variant `State::Failed`\n        State::Failed => println!(\"Failed\"),\n        _ => ()\n    }\n}\n```\n\nTo fix this error, ensure the match arm kind is the same as the expression\nmatched.\n\nFixed example:\n\n```\nenum State {\n    Succeeded,\n    Failed(String),\n}\n\nfn print_on_failure(state: &State) {\n    match *state {\n        State::Failed(ref msg) => println!(\"Failed with {}\", msg),\n        _ => ()\n    }\n}\n```\n",
+    "description": "E0532"
+  },
+  "E0603": {
+    "message": "\nA private item was used outside its scope.\n\nErroneous code example:\n\n```compile_fail,E0603\nmod SomeModule {\n    const PRIVATE: u32 = 0x_a_bad_1dea_u32; // This const is private, so we\n                                            // can't use it outside of the\n                                            // `SomeModule` module.\n}\n\nprintln!(\"const value: {}\", SomeModule::PRIVATE); // error: constant `PRIVATE`\n                                                  //        is private\n```\n\nIn order to fix this error, you need to make the item public by using the `pub`\nkeyword. Example:\n\n```\nmod SomeModule {\n    pub const PRIVATE: u32 = 0x_a_bad_1dea_u32; // We set it public by using the\n                                                // `pub` keyword.\n}\n\nprintln!(\"const value: {}\", SomeModule::PRIVATE); // ok!\n```\n",
+    "description": "E0603"
+  },
+  "E0659": {
+    "message": "\nAn item usage is ambiguous.\n\nErroneous code example:\n\n```compile_fail,E0659\npub mod moon {\n    pub fn foo() {}\n}\n\npub mod earth {\n    pub fn foo() {}\n}\n\nmod collider {\n    pub use moon::*;\n    pub use earth::*;\n}\n\nfn main() {\n    collider::foo(); // ERROR: `foo` is ambiguous\n}\n```\n\nThis error generally appears when two items with the same name are imported into\na module. Here, the `foo` functions are imported and reexported from the\n`collider` module and therefore, when we're using `collider::foo()`, both\nfunctions collide.\n\nTo solve this error, the best solution is generally to keep the path before the\nitem when using it. Example:\n\n```\npub mod moon {\n    pub fn foo() {}\n}\n\npub mod earth {\n    pub fn foo() {}\n}\n\nmod collider {\n    pub use moon;\n    pub use earth;\n}\n\nfn main() {\n    collider::moon::foo(); // ok!\n    collider::earth::foo(); // ok!\n}\n```\n",
+    "description": "E0659"
+  },
+  "E0671": {
+    "message": "\nConst parameters cannot depend on type parameters.\nThe following is therefore invalid:\n```compile_fail,E0671\n#![feature(const_generics)]\n\nfn const_id<T, const N: T>() -> T { // error: const parameter\n                                    // depends on type parameter\n    N\n}\n```\n",
+    "description": "E0671"
+  }
+}

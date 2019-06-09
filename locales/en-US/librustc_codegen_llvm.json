@@ -1,0 +1,6 @@
+{
+  "E0511": {
+    "message": "\nInvalid monomorphization of an intrinsic function was used. Erroneous code\nexample:\n\n```ignore (error-emitted-at-codegen-which-cannot-be-handled-by-compile_fail)\n#![feature(platform_intrinsics)]\n\nextern \"platform-intrinsic\" {\n    fn simd_add<T>(a: T, b: T) -> T;\n}\n\nfn main() {\n    unsafe { simd_add(0, 1); }\n    // error: invalid monomorphization of `simd_add` intrinsic\n}\n```\n\nThe generic type has to be a SIMD type. Example:\n\n```\n#![feature(repr_simd)]\n#![feature(platform_intrinsics)]\n\n#[repr(simd)]\n#[derive(Copy, Clone)]\nstruct i32x2(i32, i32);\n\nextern \"platform-intrinsic\" {\n    fn simd_add<T>(a: T, b: T) -> T;\n}\n\nunsafe { simd_add(i32x2(0, 0), i32x2(1, 2)); } // ok!\n```\n",
+    "description": "E0511"
+  }
+}
